@@ -16,9 +16,10 @@ const memoryDir = path.join(WORKSPACE_DIR, 'memory');
 const memoryMdPath = path.join(WORKSPACE_DIR, 'MEMORY.md');
 const heartbeatPath = path.join(WORKSPACE_DIR, 'HEARTBEAT.md');
 const healthHistoryFile = path.join(dataDir, 'health-history.json');
-const auditLogPath = path.join(dataDir, 'audit.log');
-const credentialsFile = path.join(dataDir, 'credentials.json');
-const mfaSecretFile = path.join(dataDir, 'mfa-secret.txt');
+const AUTH_DATA_DIR = process.env.DASHBOARD_AUTH_DIR || dataDir;
+const auditLogPath = path.join(AUTH_DATA_DIR, 'audit.log');
+const credentialsFile = path.join(AUTH_DATA_DIR, 'credentials.json');
+const mfaSecretFile = path.join(AUTH_DATA_DIR, 'mfa-secret.txt');
 
 const skillsDir = path.join(WORKSPACE_DIR, 'skills');
 const configFiles = [
