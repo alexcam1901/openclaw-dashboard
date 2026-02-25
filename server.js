@@ -1035,12 +1035,56 @@ function getServicesStatus() {
   const { execSync } = require('child_process');
   const services = ['openclaw', 'agent-dashboard', 'tailscaled'];
 
-  if (os.platform() === 'linux') {
-    return services.map(name => {
+  const hasProcess = (pattern) => {
+    try {
+      execSync(`pgrep -fa -- '${pattern}'`, { stdio: 'ignore', timeout: 3000 });
+      return true;
+    } catch {
+      return false;
+    }
+  };
+  const isSystemdServiceActive = (name) => {
+    for (const cmd of [
+      `systemctl is-active --quiet ${name}`,
+      `systemctl --user is-active --quiet ${name}`
+    ]) {
       try {
-        const status = execSync(`systemctl is-active ${name} 2>/dev/null`, { encoding: 'utf8', timeout: 3000 }).trim();
-        return { name, active: status === 'active' };
-      } catch { return { name, active: false }; }
+        execSync(cmd, { stdio: 'ignore', timeout: 3000 });
+        return true;
+      } catch {}
+    }
+    return false;
+  };
+
+  if (os.platform() === 'linux') {
+    const serviceDetectors = {
+      openclaw: {
+        systemd: ['openclaw', 'openclaw-gateway', 'openclaw-webhooks'],
+        processes: [
+          '(^|[[:space:]])openclaw([[:space:]]|$)',
+          'openclaw-gateway',
+          'openclaw-webhooks'
+        ]
+      },
+      'agent-dashboard': {
+        systemd: ['agent-dashboard'],
+        processes: ['dashboard-v2/server\\.js']
+      },
+      tailscaled: {
+        systemd: ['tailscaled'],
+        processes: ['(^|[[:space:]])tailscaled([[:space:]]|$)']
+      }
+    };
+
+    return services.map(name => {
+      const detector = serviceDetectors[name];
+      if (!detector) return { name, active: false };
+
+      const activeBySystemd = detector.systemd.some(isSystemdServiceActive);
+      if (activeBySystemd) return { name, active: true };
+
+      const activeByProcess = detector.processes.some(hasProcess);
+      return { name, active: activeByProcess };
     });
   }
 
