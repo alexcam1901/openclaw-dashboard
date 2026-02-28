@@ -1571,9 +1571,6 @@ body {
         <div style="width:1px;height:24px;background:var(--border);"></div>
         <div class="filter-chips" id="modelFilters">
           <div class="chip active" data-model="all">All Models</div>
-          <div class="chip" data-model="opus-4-6">Opus</div>
-          <div class="chip" data-model="sonnet">Sonnet</div>
-          <div class="chip" data-model="gemini">Gemini</div>
         </div>
         <div style="width:1px;height:24px;background:var(--border);"></div>
         <div class="filter-chips" id="dateFilters">
@@ -3131,6 +3128,7 @@ function updateRadialGauge(circleId, percent) {
 }
 
 function updateDashboard() {
+  try { rebuildModelFilters(); } catch(e) { console.error('ModelFilters error:', e); }
   try { updateOverview(); } catch(e) { console.error('Overview error:', e); }
   try { updateSessions(); } catch(e) { console.error('Sessions error:', e); }
   try { updateLimits(); } catch(e) { console.error('Limits error:', e); }
@@ -3348,14 +3346,60 @@ document.querySelectorAll('#statusFilters .chip').forEach(chip => {
   });
 });
 
-document.querySelectorAll('#modelFilters .chip').forEach(chip => {
-  chip.addEventListener('click', () => {
-    document.querySelectorAll('#modelFilters .chip').forEach(c => c.classList.remove('active'));
-    chip.classList.add('active');
-    modelFilter = chip.dataset.model;
-    updateSessions();
+function rebuildModelFilters() {
+  const bar = document.getElementById('modelFilters');
+  if (!bar) return;
+
+  // Collect distinct normalized models from session list
+  const modelSet = new Set();
+  sessions.forEach(s => {
+    if (s.model && s.model !== 'unknown') modelSet.add(s.model);
   });
-});
+
+  // Human-readable label helper
+  function modelLabel(m) {
+    const ml = m.toLowerCase();
+    if (ml.includes('opus')) return 'Opus';
+    if (ml.includes('sonnet')) return 'Sonnet';
+    if (ml.includes('haiku')) return 'Haiku';
+    if (ml.includes('gemini')) return 'Gemini';
+    if (ml.includes('gpt')) return 'GPT';
+    if (ml.includes('minimax')) return 'MiniMax';
+    if (ml.includes('kimi')) return 'Kimi';
+    if (ml.includes('grok')) return 'Grok';
+    // fallback: last segment after /
+    const parts = m.split('/');
+    return parts[parts.length - 1];
+  }
+
+  // Sort: known order first, then alpha
+  const order = ['opus', 'sonnet', 'haiku', 'gemini', 'gpt', 'minimax', 'kimi', 'grok'];
+  const sorted = [...modelSet].sort((a, b) => {
+    const ai = order.findIndex(k => a.toLowerCase().includes(k));
+    const bi = order.findIndex(k => b.toLowerCase().includes(k));
+    if (ai !== bi) return (ai === -1 ? 99 : ai) - (bi === -1 ? 99 : bi);
+    return a.localeCompare(b);
+  });
+
+  bar.innerHTML = '<div class="chip ' + (modelFilter === 'all' ? 'active' : '') + '" data-model="all">All Models</div>';
+  sorted.forEach(m => {
+    const chip = document.createElement('div');
+    chip.className = 'chip' + (modelFilter === m ? ' active' : '');
+    chip.dataset.model = m;
+    chip.textContent = modelLabel(m);
+    chip.title = m;
+    bar.appendChild(chip);
+  });
+
+  bar.querySelectorAll('.chip').forEach(chip => {
+    chip.addEventListener('click', () => {
+      bar.querySelectorAll('.chip').forEach(c => c.classList.remove('active'));
+      chip.classList.add('active');
+      modelFilter = chip.dataset.model;
+      updateSessions();
+    });
+  });
+}
 
 document.querySelectorAll('#dateFilters .chip').forEach(chip => {
   chip.addEventListener('click', () => {
@@ -3412,13 +3456,7 @@ function getFilteredSessions() {
   }
 
   if (modelFilter !== 'all') {
-    filtered = filtered.filter(s => {
-      const m = s.model.toLowerCase();
-      if (modelFilter === 'opus-4-6') return m.includes('opus');
-      if (modelFilter === 'sonnet') return m.includes('sonnet');
-      if (modelFilter === 'gemini') return m.includes('gemini');
-      return true;
-    });
+    filtered = filtered.filter(s => s.model === modelFilter);
   }
 
   if (sessionSearch) {
