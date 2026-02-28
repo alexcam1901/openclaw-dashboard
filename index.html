@@ -1280,6 +1280,10 @@ body {
         <span class="icon">⚡</span>
         <span class="nav-text">Live Feed</span>
       </div>
+      <div class="nav-item" data-page="agents">
+        <span class="icon">🤖</span>
+        <span class="nav-text">Agents</span>
+      </div>
       <div class="nav-item" data-page="security">
         <span class="icon">🔒</span>
         <span class="nav-text">Security</span>
@@ -1903,6 +1907,44 @@ body {
       </div>
     </div>
 
+    <div class="page" id="agents">
+      <div class="page-header">
+        <h1 class="page-title">Agents</h1>
+        <p class="page-subtitle">Active coding agents and task registry</p>
+      </div>
+
+      <div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:20px;" id="agentsFilterBar">
+        <div class="filter-chips" id="agentStatusFilters">
+          <div class="chip active" data-agent-filter="all">All</div>
+          <div class="chip" data-agent-filter="running">Running</div>
+          <div class="chip" data-agent-filter="needs-review">Needs Review</div>
+          <div class="chip" data-agent-filter="merged">Merged</div>
+          <div class="chip" data-agent-filter="failed">Failed</div>
+        </div>
+        <div style="width:1px;height:24px;background:var(--border);"></div>
+        <div class="filter-chips" id="agentProjectFilters">
+          <div class="chip active" data-agent-project="all">All Projects</div>
+        </div>
+      </div>
+
+      <div id="agentsTableWrap">
+        <div class="sessions-table">
+          <div class="table-header" style="grid-template-columns: 140px 130px 110px 90px 90px 1fr 100px;">
+            <div>Task</div>
+            <div>Project</div>
+            <div>Agent</div>
+            <div>Status</div>
+            <div>PR</div>
+            <div>Description</div>
+            <div>Started</div>
+          </div>
+          <div id="agentsTableBody">
+            <div style="padding:32px;text-align:center;color:var(--text-muted);">Loading…</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <div class="page" id="security">
       <div class="page-header">
         <h1 class="page-title">Security</h1>
@@ -2454,6 +2496,7 @@ function showApp() {
   setInterval(fetchHealthHistory, 60000);
   setInterval(fetchMemoryFiles, 30000);
   setInterval(fetchKeyFiles, 30000);
+  setInterval(() => { if (document.getElementById('agents')?.classList.contains('active')) fetchAgentTasks(); }, 30000);
 }
 
 function showLogin() {
@@ -3005,6 +3048,9 @@ document.querySelectorAll('.nav-item').forEach(item => {
     }
     if (page === 'files') {
       fetchKeyFiles();
+    }
+    if (page === 'agents') {
+      fetchAgentTasks();
     }
   });
 });
@@ -5243,6 +5289,122 @@ setTimeout(() => {
   if (costs.perDay) calculateStreak();
   updatePageTitle();
 }, 2000);
+
+// ─── Agents Page ───────────────────────────────────────────────────────────
+let agentTasks = [];
+let agentStatusFilter = 'all';
+let agentProjectFilter = 'all';
+
+async function fetchAgentTasks() {
+  try {
+    const res = await authFetch(API_BASE + '/api/active-tasks');
+    agentTasks = await res.json();
+    renderAgentProjects();
+    renderAgentsTable();
+  } catch (e) {
+    const el = document.getElementById('agentsTableBody');
+    if (el) el.innerHTML = '<div style="padding:32px;text-align:center;color:var(--red);">Failed to load tasks</div>';
+  }
+}
+
+function renderAgentProjects() {
+  const bar = document.getElementById('agentProjectFilters');
+  if (!bar) return;
+  const projects = [...new Set(agentTasks.map(t => t.project || t.repo || 'unknown'))].sort();
+  // Keep 'All Projects' chip, rebuild the rest
+  bar.innerHTML = '<div class="chip ' + (agentProjectFilter === 'all' ? 'active' : '') + '" data-agent-project="all">All Projects</div>';
+  projects.forEach(p => {
+    const chip = document.createElement('div');
+    chip.className = 'chip' + (agentProjectFilter === p ? ' active' : '');
+    chip.dataset.agentProject = p;
+    chip.textContent = p;
+    bar.appendChild(chip);
+  });
+  bar.querySelectorAll('[data-agent-project]').forEach(chip => {
+    chip.addEventListener('click', () => {
+      agentProjectFilter = chip.dataset.agentProject;
+      bar.querySelectorAll('[data-agent-project]').forEach(c => c.classList.remove('active'));
+      chip.classList.add('active');
+      renderAgentsTable();
+    });
+  });
+}
+
+function agentStatusBadge(status) {
+  const map = {
+    'running':      ['var(--accent)', '▶ Running'],
+    'needs-review': ['var(--yellow, #f5c518)', '👀 Needs Review'],
+    'done':         ['var(--green)', '✓ Done'],
+    'merged':       ['var(--purple, #a855f7)', '⛙ Merged'],
+    'failed':       ['var(--red)', '✗ Failed'],
+  };
+  const [color, label] = map[status] || ['var(--text-muted)', status || 'unknown'];
+  return `<span style="display:inline-block;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:600;background:${color}22;color:${color};">${label}</span>`;
+}
+
+function agentPRLink(task) {
+  if (!task.checks || !task.checks.prNumber) return '<span style="color:var(--text-muted);">—</span>';
+  const repo = task.project || (typeof task.repo === 'string' && task.repo.includes('/') ? task.repo.split('/').slice(-2).join('/') : null);
+  const prNum = task.checks.prNumber;
+  if (repo) {
+    const org = 'alexcam1901';
+    const href = `https://github.com/${org}/${repo}/pull/${prNum}`;
+    const ciIcon = task.checks.ciPassed ? '✓' : (task.checks.ciPassed === false ? '✗' : '?');
+    const ciColor = task.checks.ciPassed ? 'var(--green)' : (task.checks.ciPassed === false ? 'var(--red)' : 'var(--text-muted)');
+    return `<a href="${href}" target="_blank" style="color:var(--accent);text-decoration:none;">#${prNum}</a> <span style="color:${ciColor};font-size:11px;" title="CI">${ciIcon}</span>`;
+  }
+  return `<span style="color:var(--accent);">#${prNum}</span>`;
+}
+
+function renderAgentsTable() {
+  const el = document.getElementById('agentsTableBody');
+  if (!el) return;
+
+  let tasks = agentTasks;
+  if (agentStatusFilter !== 'all') tasks = tasks.filter(t => t.status === agentStatusFilter);
+  if (agentProjectFilter !== 'all') tasks = tasks.filter(t => (t.project || t.repo || 'unknown') === agentProjectFilter);
+
+  // Sort: running first, then needs-review, then others by startedAt desc
+  const order = { running: 0, 'needs-review': 1, done: 2, merged: 3, failed: 4 };
+  tasks = [...tasks].sort((a, b) => {
+    const oa = order[a.status] ?? 5, ob = order[b.status] ?? 5;
+    if (oa !== ob) return oa - ob;
+    return (b.startedAt || 0) - (a.startedAt || 0);
+  });
+
+  if (tasks.length === 0) {
+    el.innerHTML = '<div style="padding:32px;text-align:center;color:var(--text-muted);">No tasks found</div>';
+    return;
+  }
+
+  el.innerHTML = tasks.map(t => {
+    const proj = t.project || (typeof t.repo === 'string' ? t.repo.replace(/.*\//, '') : '') || '—';
+    const started = t.startedAt ? new Date(t.startedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : '—';
+    const desc = (t.description || '').replace(/^#.*\n/, '').trim().slice(0, 80) + ((t.description || '').length > 80 ? '…' : '');
+    const model = t.model || t.agent || '—';
+    return `<div class="table-row" style="grid-template-columns: 140px 130px 110px 90px 90px 1fr 100px;cursor:default;">
+      <div class="mono" style="font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${t.id || ''}">${t.id || '—'}</div>
+      <div style="font-size:12px;color:var(--text-secondary);">${proj}</div>
+      <div style="font-size:11px;color:var(--text-muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${model}">${model}</div>
+      <div>${agentStatusBadge(t.status)}</div>
+      <div>${agentPRLink(t)}</div>
+      <div style="font-size:12px;color:var(--text-secondary);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${(t.description||'').replace(/"/g,'&quot;')}">${desc || '—'}</div>
+      <div style="font-size:12px;color:var(--text-muted);">${started}</div>
+    </div>`;
+  }).join('');
+}
+
+// Wire up status filter chips for agents
+document.addEventListener('DOMContentLoaded', () => {
+  document.getElementById('agentStatusFilters')?.querySelectorAll('[data-agent-filter]').forEach(chip => {
+    chip.addEventListener('click', () => {
+      agentStatusFilter = chip.dataset.agentFilter;
+      document.getElementById('agentStatusFilters').querySelectorAll('[data-agent-filter]').forEach(c => c.classList.remove('active'));
+      chip.classList.add('active');
+      renderAgentsTable();
+    });
+  });
+});
 </script>
 </body>
 </html>

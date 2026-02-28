@@ -2444,6 +2444,24 @@ const server = http.createServer((req, res) => {
       }
       return;
     }
+    if (req.url === '/api/active-tasks') {
+      try {
+        const activeTasksFile = path.join(OPENCLAW_DIR, 'active-tasks.json');
+        if (fs.existsSync(activeTasksFile)) {
+          const data = JSON.parse(fs.readFileSync(activeTasksFile, 'utf8'));
+          res.writeHead(200, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify(data.tasks || []));
+        } else {
+          res.writeHead(200, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify([]));
+        }
+      } catch (e) {
+        res.writeHead(500, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: e.message }));
+      }
+      return;
+    }
+
     if (req.url === '/api/live' || req.url.startsWith('/api/live?')) {
       res.writeHead(200, {
         'Content-Type': 'text/event-stream',
