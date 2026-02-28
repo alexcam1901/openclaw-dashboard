@@ -3350,12 +3350,6 @@ function rebuildModelFilters() {
   const bar = document.getElementById('modelFilters');
   if (!bar) return;
 
-  // Collect distinct normalized models from session list
-  const modelSet = new Set();
-  sessions.forEach(s => {
-    if (s.model && s.model !== 'unknown') modelSet.add(s.model);
-  });
-
   // Human-readable label helper
   function modelLabel(m) {
     const ml = m.toLowerCase();
@@ -3367,26 +3361,43 @@ function rebuildModelFilters() {
     if (ml.includes('minimax')) return 'MiniMax';
     if (ml.includes('kimi')) return 'Kimi';
     if (ml.includes('grok')) return 'Grok';
-    // fallback: last segment after /
     const parts = m.split('/');
     return parts[parts.length - 1];
   }
 
-  // Sort: known order first, then alpha
-  const order = ['opus', 'sonnet', 'haiku', 'gemini', 'gpt', 'minimax', 'kimi', 'grok'];
-  const sorted = [...modelSet].sort((a, b) => {
-    const ai = order.findIndex(k => a.toLowerCase().includes(k));
-    const bi = order.findIndex(k => b.toLowerCase().includes(k));
+  // Count sessions per model string, then deduplicate by label (keep most-used variant)
+  const modelCounts = {};
+  sessions.forEach(s => {
+    if (s.model && s.model !== 'unknown' && s.model !== '-') {
+      modelCounts[s.model] = (modelCounts[s.model] || 0) + 1;
+    }
+  });
+
+  // Group by label, pick the model string with the highest session count
+  const labelToModel = {};
+  const labelCounts = {};
+  for (const [m, cnt] of Object.entries(modelCounts)) {
+    const lbl = modelLabel(m);
+    if (!labelToModel[lbl] || cnt > labelCounts[lbl]) {
+      labelToModel[lbl] = m;
+      labelCounts[lbl] = cnt;
+    }
+  }
+
+  // Sort by known order
+  const order = ['Opus', 'Sonnet', 'Haiku', 'Gemini', 'GPT', 'MiniMax', 'Kimi', 'Grok'];
+  const sorted = Object.entries(labelToModel).sort(([la], [lb]) => {
+    const ai = order.indexOf(la), bi = order.indexOf(lb);
     if (ai !== bi) return (ai === -1 ? 99 : ai) - (bi === -1 ? 99 : bi);
-    return a.localeCompare(b);
+    return la.localeCompare(lb);
   });
 
   bar.innerHTML = '<div class="chip ' + (modelFilter === 'all' ? 'active' : '') + '" data-model="all">All Models</div>';
-  sorted.forEach(m => {
+  sorted.forEach(([lbl, m]) => {
     const chip = document.createElement('div');
     chip.className = 'chip' + (modelFilter === m ? ' active' : '');
     chip.dataset.model = m;
-    chip.textContent = modelLabel(m);
+    chip.textContent = lbl;
     chip.title = m;
     bar.appendChild(chip);
   });

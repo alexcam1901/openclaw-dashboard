@@ -756,17 +756,17 @@ function getUsageWindows() {
     const now = Date.now();
     const fiveHoursMs = 5 * 3600000;
     const oneWeekMs = 7 * 86400000;
-    const files = fs.readdirSync(sessDir).filter(f => {
-      if (!f.endsWith('.jsonl')) return false;
-      try { return fs.statSync(path.join(sessDir, f)).mtimeMs > now - oneWeekMs; } catch { return false; }
-    });
-
     const perModel5h = {};
     const perModelWeek = {};
     const recentMessages = [];
 
+    for (const dir of getAllSessDirs()) {
+    const files = fs.readdirSync(dir).filter(f => {
+      if (!f.endsWith('.jsonl')) return false;
+      try { return fs.statSync(path.join(dir, f)).mtimeMs > now - oneWeekMs; } catch { return false; }
+    });
     for (const file of files) {
-      const lines = fs.readFileSync(path.join(sessDir, file), 'utf8').split('\n');
+      const lines = fs.readFileSync(path.join(dir, file), 'utf8').split('\n');
       for (const line of lines) {
         if (!line.trim()) continue;
         try {
@@ -809,6 +809,8 @@ function getUsageWindows() {
         } catch {}
       }
     }
+
+    } // end for (const dir of getAllSessDirs())
 
     recentMessages.sort((a, b) => b.ts - a.ts);
 
@@ -1450,14 +1452,15 @@ function buildKeyFilesAllowed() {
 
 function getTodayTokens() {
   try {
-    const files = fs.readdirSync(sessDir).filter(f => isSessionFile(f));
     const now = new Date();
     const todayStr = now.toISOString().substring(0, 10);
     const perModel = {};
     let totalInput = 0, totalOutput = 0;
 
+    for (const dir of getAllSessDirs()) {
+    const files = fs.readdirSync(dir).filter(f => isSessionFile(f));
     for (const file of files) {
-      const lines = fs.readFileSync(path.join(sessDir, file), 'utf8').split('\n');
+      const lines = fs.readFileSync(path.join(dir, file), 'utf8').split('\n');
       for (const line of lines) {
         if (!line.trim()) continue;
         try {
@@ -1479,6 +1482,7 @@ function getTodayTokens() {
         } catch {}
       }
     }
+    } // end for (const dir of getAllSessDirs())
     return { totalInput, totalOutput, perModel };
   } catch { return { totalInput: 0, totalOutput: 0, perModel: {} }; }
 }
@@ -2340,12 +2344,14 @@ const server = http.createServer((req, res) => {
           res.end(JSON.stringify(global[cacheKey]));
           return;
         }
-        const files = fs.readdirSync(sessDir).filter(f => isSessionFile(f));
-        let totalTokens = 0, totalMessages = 0, totalCost = 0, totalSessions = files.length;
+        let totalTokens = 0, totalMessages = 0, totalCost = 0, totalSessions = 0;
         let firstSessionDate = null;
         const activeDays = new Set();
+        for (const dir of getAllSessDirs()) {
+        const files = fs.readdirSync(dir).filter(f => isSessionFile(f));
+        totalSessions += files.length;
         for (const file of files) {
-          const lines = fs.readFileSync(path.join(sessDir, file), 'utf8').split('\n');
+          const lines = fs.readFileSync(path.join(dir, file), 'utf8').split('\n');
           for (const line of lines) {
             if (!line.trim()) continue;
             try {
@@ -2368,6 +2374,7 @@ const server = http.createServer((req, res) => {
             } catch {}
           }
         }
+        } // end for (const dir of getAllSessDirs())
         const result = {
           totalTokens,
           totalMessages,
