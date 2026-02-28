@@ -36,16 +36,19 @@ const pricingFile = path.join(WORKSPACE_DIR, 'data', 'model_pricing_usd_per_mill
 const htmlPath = path.join(__dirname, 'index.html');
 
 const DEFAULT_MODEL_PRICING = {
-  'anthropic/claude-opus-4-6': { input: 15.00, output: 75.00, cacheRead: 1.875, cacheWrite: 18.75 },
+  'anthropic/claude-opus-4-6': { input: 5.00, output: 25.00, cacheRead: 0.625, cacheWrite: 6.25 },
   'anthropic/claude-opus-4-5': { input: 15.00, output: 75.00, cacheRead: 1.875, cacheWrite: 18.75 },
   'anthropic/claude-sonnet-4-6': { input: 3.00, output: 15.00, cacheRead: 0.30, cacheWrite: 3.75 },
   'anthropic/claude-sonnet-4-5': { input: 3.00, output: 15.00, cacheRead: 0.30, cacheWrite: 3.75 },
+  'anthropic/claude-haiku-4-5': { input: 1.00, output: 5.00, cacheRead: 0.10, cacheWrite: 1.25 },
   'anthropic/claude-3-5-haiku-latest': { input: 0.80, output: 4.00, cacheRead: 0.08, cacheWrite: 1.00 },
   'openai/gpt-4o-mini': { input: 0.15, output: 0.60, cacheRead: 0.075, cacheWrite: 0.30 },
   'openai/gpt-4.1-mini': { input: 0.40, output: 1.60, cacheRead: 0.20, cacheWrite: 0.80 },
   'google/gemini-3-pro-preview': { input: 1.25, output: 10.00, cacheRead: 0.31, cacheWrite: 4.50 },
   'google/gemini-3-flash-preview': { input: 0.15, output: 0.60, cacheRead: 0.04, cacheWrite: 0.15 },
-  'xai/grok-4-1-fast': { input: 0.20, output: 0.50, cacheRead: 0.05, cacheWrite: 0.20 }
+  'xai/grok-4-1-fast': { input: 0.20, output: 0.50, cacheRead: 0.05, cacheWrite: 0.20 },
+  'minimax/MiniMax-M2.1': { input: 15.00, output: 60.00, cacheRead: 2.00, cacheWrite: 10.00 },
+  'nvidia/moonshotai/kimi-k2.5': { input: 0.00, output: 0.00, cacheRead: 0.00, cacheWrite: 0.00 }
 };
 
 function toNum(v) {
@@ -54,7 +57,10 @@ function toNum(v) {
 }
 
 function normalizeProvider(provider) {
-  return String(provider || 'unknown').trim().toLowerCase();
+  const p = String(provider || 'unknown').trim().toLowerCase();
+  if (p === 'claude-proxy' || p === 'bedrock') return 'anthropic';
+  if (p === 'minimax') return 'minimax';
+  return p;
 }
 
 function normalizeModel(provider, model) {
@@ -62,13 +68,14 @@ function normalizeModel(provider, model) {
   let m = String(model || 'unknown').trim();
   const pref = p + '/';
   if (m.toLowerCase().startsWith(pref)) m = m.slice(pref.length);
-  const ml = m.toLowerCase();
+  let ml = m.toLowerCase();
   if (p === 'anthropic') {
+    if (ml.startsWith('global.anthropic.')) ml = ml.slice('global.anthropic.'.length);
     if (ml.startsWith('claude-opus-4-6')) return 'claude-opus-4-6';
     if (ml.startsWith('claude-opus-4-5')) return 'claude-opus-4-5';
     if (ml.startsWith('claude-sonnet-4-6')) return 'claude-sonnet-4-6';
     if (ml.startsWith('claude-sonnet-4-5')) return 'claude-sonnet-4-5';
-    if (ml.startsWith('claude-3-5-haiku')) return 'claude-3-5-haiku-latest';
+    if (ml.startsWith('claude-haiku-4-5') || ml.startsWith('claude-3-5-haiku')) return 'claude-haiku-4-5';
   }
   if (p === 'openai') {
     if (ml.startsWith('gpt-4o-mini')) return 'gpt-4o-mini';
@@ -76,6 +83,9 @@ function normalizeModel(provider, model) {
   }
   if (p === 'google' && ml.startsWith('gemini-3-flash-preview')) return 'gemini-3-flash-preview';
   if (p === 'xai' && ml.startsWith('grok-4-1-fast')) return 'grok-4-1-fast';
+  if (p === 'minimax') {
+    if (ml.startsWith('minimax-m2') || ml === 'm2.1') return 'MiniMax-M2.1';
+  }
   if (p === 'nvidia' && ml.includes('kimi-k2.5')) return 'moonshotai/kimi-k2.5';
   return m;
 }
