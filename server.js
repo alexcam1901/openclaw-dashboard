@@ -509,6 +509,47 @@ function getLastMessage(sessionId) {
 }
 
 function isSessionFile(f) { return f.endsWith('.jsonl') || f.includes('.jsonl.reset.'); }
+
+// Find the JSONL file for a sessionId across all agent dirs
+function findSessionFile(sessionId) {
+  for (const dir of getAllSessDirs()) {
+    const p = path.join(dir, sessionId + '.jsonl');
+    if (fs.existsSync(p)) return p;
+  }
+  return null;
+}
+
+// Get the dominant (most-used) normalized model from a session JSONL
+const _sessionModelCache = {};
+function getSessionModel(sessionId) {
+  if (_sessionModelCache[sessionId]) return _sessionModelCache[sessionId];
+  try {
+    const filePath = findSessionFile(sessionId);
+    if (!filePath) return null;
+    const counts = {};
+    const lines = fs.readFileSync(filePath, 'utf8').split('\n');
+    for (const line of lines) {
+      if (!line.trim()) continue;
+      try {
+        const d = JSON.parse(line);
+        if (d.type !== 'message') continue;
+        const msg = d.message;
+        if (!msg || msg.role !== 'assistant') continue;
+        const rawModel = msg.model || '';
+        const rawProvider = msg.provider || '';
+        if (!rawModel || rawModel.includes('delivery-mirror') || rawModel.includes('gateway-injected')) continue;
+        const p = normalizeProvider(rawProvider);
+        const m = normalizeModel(p, rawModel);
+        const key = p + '/' + m;
+        counts[key] = (counts[key] || 0) + 1;
+      } catch {}
+    }
+    const dominant = Object.entries(counts).sort((a, b) => b[1] - a[1])[0];
+    const result = dominant ? dominant[0] : null;
+    if (result) _sessionModelCache[sessionId] = result;
+    return result;
+  } catch { return null; }
+}
 function extractSessionId(f) { return f.replace(/\.jsonl(?:\.reset\.\d+)?$/, ''); }
 
 let sessionCostCache = {};
@@ -560,10 +601,15 @@ function getSessionsJson() {
       } catch {}
     }
     return Object.entries(allSessions).map(([key, s]) => {
-      const rawModel = s.modelOverride || s.model || '-';
-      const provider = normalizeProvider(rawModel.split('/')[0]);
-      const model = rawModel.includes('/') ? normalizeModel(provider, rawModel.split('/').slice(1).join('/')) : normalizeModel('anthropic', rawModel);
-      const normalizedModel = `${provider}/${model}`;
+      // Prefer model derived from actual JSONL messages (most-used); fall back to sessions.json field
+      const sid = s.sessionId || key.split(':').pop();
+      let normalizedModel = getSessionModel(sid);
+      if (!normalizedModel) {
+        const rawModel = s.modelOverride || s.model || '-';
+        const provider = normalizeProvider(rawModel.split('/')[0]);
+        const m = rawModel.includes('/') ? normalizeModel(provider, rawModel.split('/').slice(1).join('/')) : normalizeModel('anthropic', rawModel);
+        normalizedModel = `${provider}/${m}`;
+      }
       return {
         key,
         label: s.label || resolveName(key),
