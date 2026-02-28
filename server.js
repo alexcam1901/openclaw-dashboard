@@ -511,12 +511,55 @@ function getLastMessage(sessionId) {
 function isSessionFile(f) { return f.endsWith('.jsonl') || f.includes('.jsonl.reset.'); }
 
 // Find the JSONL file for a sessionId across all agent dirs
+// Handles variants like <sid>-topic-N.jsonl
 function findSessionFile(sessionId) {
   for (const dir of getAllSessDirs()) {
-    const p = path.join(dir, sessionId + '.jsonl');
-    if (fs.existsSync(p)) return p;
+    const exact = path.join(dir, sessionId + '.jsonl');
+    if (fs.existsSync(exact)) return exact;
+    // Search for files starting with this sessionId (e.g. topic-suffix variants)
+    try {
+      const match = fs.readdirSync(dir).find(f => f.startsWith(sessionId) && f.endsWith('.jsonl'));
+      if (match) return path.join(dir, match);
+    } catch {}
   }
   return null;
+}
+
+// Get total tokens for a session from its JSONL
+const _sessionTokenCache = {};
+let _sessionTokenCacheTime = 0;
+function buildSessionTokenCache() {
+  const now = Date.now();
+  if (now - _sessionTokenCacheTime < 60000) return;
+  _sessionTokenCacheTime = now;
+  try {
+    for (const dir of getAllSessDirs()) {
+      for (const file of fs.readdirSync(dir).filter(f => isSessionFile(f))) {
+        const sid = extractSessionId(file);
+        let tokens = 0;
+        for (const line of fs.readFileSync(path.join(dir, file), 'utf8').split('\n')) {
+          if (!line.trim()) continue;
+          try {
+            const d = JSON.parse(line);
+            if (d.type !== 'message') continue;
+            const msg = d.message;
+            if (!msg?.usage || msg.role !== 'assistant') continue;
+            if ((msg.model||'').includes('delivery-mirror') || (msg.model||'').includes('gateway-injected')) continue;
+            tokens += (msg.usage.input||0) + (msg.usage.output||0) + (msg.usage.cacheRead||0) + (msg.usage.cacheWrite||0);
+          } catch {}
+        }
+        const uuidSid2 = sid.match(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i)?.[0] || sid;
+        if (tokens > 0) {
+          _sessionTokenCache[sid] = (_sessionTokenCache[sid] || 0) + tokens;
+          if (uuidSid2 !== sid) _sessionTokenCache[uuidSid2] = (_sessionTokenCache[uuidSid2] || 0) + tokens;
+        }
+      }
+    }
+  } catch {}
+}
+function getSessionTokens(sessionId) {
+  buildSessionTokenCache();
+  return _sessionTokenCache[sessionId] || 0;
 }
 
 // Get the dominant (most-used) normalized model from a session JSONL
@@ -564,7 +607,9 @@ function getSessionCost(sessionId) {
       for (const dir of getAllSessDirs()) {
         const files = fs.readdirSync(dir).filter(f => isSessionFile(f));
         for (const file of files) {
-          const sid = extractSessionId(file);
+          const fullSid = extractSessionId(file);
+          // Also index by UUID prefix (strip -topic-N etc.) so sessionId lookups match
+          const uuidSid = fullSid.match(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i)?.[0] || fullSid;
           let total = 0;
           const lines = fs.readFileSync(path.join(dir, file), 'utf8').split('\n');
           for (const line of lines) {
@@ -576,7 +621,10 @@ function getSessionCost(sessionId) {
               if (c > 0) total += c;
             } catch {}
           }
-          if (total > 0) sessionCostCache[sid] = Math.round(total * 100) / 100;
+          if (total > 0) {
+            sessionCostCache[fullSid] = (sessionCostCache[fullSid] || 0) + Math.round(total * 100) / 100;
+            if (uuidSid !== fullSid) sessionCostCache[uuidSid] = (sessionCostCache[uuidSid] || 0) + Math.round(total * 100) / 100;
+          }
         }
       }
     } catch {}
@@ -614,7 +662,7 @@ function getSessionsJson() {
         key,
         label: s.label || resolveName(key),
         model: normalizedModel,
-        totalTokens: s.totalTokens || 0,
+        totalTokens: getSessionTokens(s.sessionId || key.split(':').pop()),
         contextTokens: s.contextTokens || 0,
         kind: s.kind || (key.includes('group') ? 'group' : 'direct'),
         updatedAt: s.updatedAt || 0,
