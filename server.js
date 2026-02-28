@@ -548,10 +548,8 @@ function buildSessionTokenCache() {
             tokens += (msg.usage.input||0) + (msg.usage.output||0) + (msg.usage.cacheRead||0) + (msg.usage.cacheWrite||0);
           } catch {}
         }
-        const uuidSid2 = sid.match(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i)?.[0] || sid;
         if (tokens > 0) {
           _sessionTokenCache[sid] = (_sessionTokenCache[sid] || 0) + tokens;
-          if (uuidSid2 !== sid) _sessionTokenCache[uuidSid2] = (_sessionTokenCache[uuidSid2] || 0) + tokens;
         }
       }
     }
@@ -559,7 +557,10 @@ function buildSessionTokenCache() {
 }
 function getSessionTokens(sessionId) {
   buildSessionTokenCache();
-  return _sessionTokenCache[sessionId] || 0;
+  if (_sessionTokenCache[sessionId]) return _sessionTokenCache[sessionId];
+  // Try prefix match for -topic-N variants
+  const match = Object.keys(_sessionTokenCache).find(k => k.startsWith(sessionId));
+  return match ? _sessionTokenCache[match] : 0;
 }
 
 // Get the dominant (most-used) normalized model from a session JSONL
@@ -623,13 +624,15 @@ function getSessionCost(sessionId) {
           }
           if (total > 0) {
             sessionCostCache[fullSid] = (sessionCostCache[fullSid] || 0) + Math.round(total * 100) / 100;
-            if (uuidSid !== fullSid) sessionCostCache[uuidSid] = (sessionCostCache[uuidSid] || 0) + Math.round(total * 100) / 100;
           }
         }
       }
     } catch {}
   }
-  return sessionCostCache[sessionId] || 0;
+  if (sessionCostCache[sessionId]) return sessionCostCache[sessionId];
+  // Try prefix match for -topic-N variants
+  const match = Object.keys(sessionCostCache).find(k => k.startsWith(sessionId));
+  return match ? sessionCostCache[match] : 0;
 }
 
 function getSessionsJson() {
@@ -659,23 +662,36 @@ function getSessionsJson() {
     // 2. Also scan JSONL files directly — surface any with cost/tokens not in sessions.json
     for (const dir of getAllSessDirs()) {
       try {
-        for (const file of fs.readdirSync(dir).filter(f => isSessionFile(f))) {
+        for (const file of fs.readdirSync(dir).filter(f => f.endsWith('.jsonl'))) { // skip reset files
           const fullSid = extractSessionId(file);
           const uuidSid = fullSid.match(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i)?.[0] || fullSid;
           if (knownJsonlFiles.has(uuidSid) || knownJsonlFiles.has(fullSid)) continue;
+          // Read last timestamp from file
+          let lastTs = 0;
+          try {
+            const lines = fs.readFileSync(path.join(dir, file), 'utf8').split('\n');
+            for (const line of lines) {
+              if (!line.trim()) continue;
+              try {
+                const d = JSON.parse(line);
+                const ts = d.timestamp ? new Date(d.timestamp).getTime() : 0;
+                if (ts > lastTs) lastTs = ts;
+              } catch {}
+            }
+          } catch {}
           // Not in sessions.json — create a synthetic entry
           const synKey = 'jsonl:' + fullSid;
           if (!allSessions[synKey]) {
             allSessions[synKey] = {
               _dir: dir,
-              _updatedAt: 0,
+              _updatedAt: lastTs,
               _jsonlFile: fullSid,
               sessionId: uuidSid,
               label: null,
               model: null,
               totalTokens: 0,
-              updatedAt: 0,
-              createdAt: 0,
+              updatedAt: lastTs,
+              createdAt: lastTs,
             };
             knownJsonlFiles.add(uuidSid);
           }
@@ -2627,6 +2643,53 @@ const server = http.createServer((req, res) => {
       }
       return;
     }
+    if (req.url === '/api/stats' || req.url.startsWith('/api/stats?')) {
+      try {
+        const params = new URL(req.url, 'http://localhost').searchParams;
+        const range = params.get('range') || '7d';
+        const now = Date.now();
+        const rangeMs = range === 'today' ? 86400000 :
+                        range === '7d'    ? 7  * 86400000 :
+                        range === '30d'   ? 30 * 86400000 : Infinity;
+        const since = rangeMs === Infinity ? 0 : now - rangeMs;
+        // today: midnight
+        const todayMidnight = new Date(); todayMidnight.setHours(0,0,0,0);
+        const effectiveSince = range === 'today' ? todayMidnight.getTime() : since;
+
+        let cost = 0, tokens = 0, sessions = 0;
+        const seenFiles = new Set();
+        for (const dir of getAllSessDirs()) {
+          for (const file of fs.readdirSync(dir).filter(f => f.endsWith('.jsonl'))) {
+            if (seenFiles.has(file)) continue;
+            seenFiles.add(file);
+            let fileCost = 0, fileTokens = 0, fileInRange = false;
+            try {
+              for (const line of fs.readFileSync(path.join(dir, file), 'utf8').split('\n')) {
+                if (!line.trim()) continue;
+                const d = JSON.parse(line);
+                if (d.type !== 'message') continue;
+                const msg = d.message;
+                if (!msg?.usage || msg.role !== 'assistant') continue;
+                if ((msg.model||'').includes('delivery-mirror') || (msg.model||'').includes('gateway-injected')) continue;
+                const ts = d.timestamp ? new Date(d.timestamp).getTime() : 0;
+                if (ts < effectiveSince) continue;
+                fileInRange = true;
+                fileCost  += msg.usage.cost?.total || 0;
+                fileTokens += (msg.usage.input||0)+(msg.usage.output||0)+(msg.usage.cacheRead||0)+(msg.usage.cacheWrite||0);
+              }
+            } catch {}
+            if (fileInRange) { cost += fileCost; tokens += fileTokens; sessions++; }
+          }
+        }
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ cost: Math.round(cost*100)/100, tokens, sessions, range }));
+      } catch(e) {
+        res.writeHead(500, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: e.message }));
+      }
+      return;
+    }
+
     if (req.url === '/api/active-tasks') {
       try {
         const activeTasksFile = path.join(OPENCLAW_DIR, 'active-tasks.json');

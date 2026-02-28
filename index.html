@@ -3491,11 +3491,29 @@ function getModelColor(model) {
 }
 
 function updateSessionsStats(filtered) {
-  const totalTokens = filtered.reduce((sum, s) => sum + (s.totalTokens || 0), 0);
-  const totalCost = filtered.reduce((sum, s) => sum + (s.cost || 0), 0);
+  // Session count still comes from the filtered list
   document.getElementById('statsSessionCount').textContent = filtered.length;
-  document.getElementById('statsTotalTokens').textContent = totalTokens >= 1000000 ? (totalTokens / 1000000).toFixed(1) + 'M' : totalTokens >= 1000 ? (totalTokens / 1000).toFixed(0) + 'k' : totalTokens;
-  document.getElementById('statsTotalCost').textContent = '$' + totalCost.toFixed(2);
+  // Tokens + cost come from /api/stats (scans raw JSONL by timestamp — authoritative)
+  const range = dateRange || '7d';
+  authFetch(API_BASE + '/api/stats?range=' + range)
+    .then(r => r.json())
+    .then(data => {
+      const totalTokens = data.tokens || 0;
+      const totalCost = data.cost || 0;
+      document.getElementById('statsTotalTokens').textContent =
+        totalTokens >= 1000000 ? (totalTokens / 1000000).toFixed(1) + 'M' :
+        totalTokens >= 1000    ? (totalTokens / 1000).toFixed(0) + 'k' : totalTokens;
+      document.getElementById('statsTotalCost').textContent = '$' + totalCost.toFixed(2);
+    })
+    .catch(() => {
+      // fallback to per-session sum if endpoint fails
+      const totalTokens = filtered.reduce((sum, s) => sum + (s.totalTokens || 0), 0);
+      const totalCost   = filtered.reduce((sum, s) => sum + (s.cost || 0), 0);
+      document.getElementById('statsTotalTokens').textContent =
+        totalTokens >= 1000000 ? (totalTokens / 1000000).toFixed(1) + 'M' :
+        totalTokens >= 1000    ? (totalTokens / 1000).toFixed(0) + 'k' : totalTokens;
+      document.getElementById('statsTotalCost').textContent = '$' + totalCost.toFixed(2);
+    });
 }
 
 function renderTimeline(filtered) {
