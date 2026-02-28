@@ -634,35 +634,77 @@ function getSessionCost(sessionId) {
 
 function getSessionsJson() {
   try {
+    // 1. Load sessions from sessions.json files
     const allSessions = {};
+    const knownJsonlFiles = new Set(); // track JSONL files accounted for by sessions.json
+
     for (const dir of getAllSessDirs()) {
       const sFile = path.join(dir, 'sessions.json');
       if (!fs.existsSync(sFile)) continue;
       try {
         const data = JSON.parse(fs.readFileSync(sFile, 'utf8'));
         for (const [key, s] of Object.entries(data)) {
-          // Last-write wins (by updatedAt) if same key appears in multiple agents
           if (!allSessions[key] || (s.updatedAt || 0) > (allSessions[key]._updatedAt || 0)) {
             allSessions[key] = { ...s, _dir: dir, _updatedAt: s.updatedAt || 0 };
           }
         }
       } catch {}
     }
+
+    // Build set of JSONL UUIDs already covered by sessions.json entries
+    for (const s of Object.values(allSessions)) {
+      if (s.sessionId) knownJsonlFiles.add(s.sessionId);
+    }
+
+    // 2. Also scan JSONL files directly — surface any with cost/tokens not in sessions.json
+    for (const dir of getAllSessDirs()) {
+      try {
+        for (const file of fs.readdirSync(dir).filter(f => isSessionFile(f))) {
+          const fullSid = extractSessionId(file);
+          const uuidSid = fullSid.match(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i)?.[0] || fullSid;
+          if (knownJsonlFiles.has(uuidSid) || knownJsonlFiles.has(fullSid)) continue;
+          // Not in sessions.json — create a synthetic entry
+          const synKey = 'jsonl:' + fullSid;
+          if (!allSessions[synKey]) {
+            allSessions[synKey] = {
+              _dir: dir,
+              _updatedAt: 0,
+              _jsonlFile: fullSid,
+              sessionId: uuidSid,
+              label: null,
+              model: null,
+              totalTokens: 0,
+              updatedAt: 0,
+              createdAt: 0,
+            };
+            knownJsonlFiles.add(uuidSid);
+          }
+        }
+      } catch {}
+    }
+
     return Object.entries(allSessions).map(([key, s]) => {
-      // Prefer model derived from actual JSONL messages (most-used); fall back to sessions.json field
       const sid = s.sessionId || key.split(':').pop();
       let normalizedModel = getSessionModel(sid);
       if (!normalizedModel) {
         const rawModel = s.modelOverride || s.model || '-';
-        const provider = normalizeProvider(rawModel.split('/')[0]);
-        const m = rawModel.includes('/') ? normalizeModel(provider, rawModel.split('/').slice(1).join('/')) : normalizeModel('anthropic', rawModel);
-        normalizedModel = `${provider}/${m}`;
+        if (rawModel && rawModel !== '-') {
+          const provider = normalizeProvider(rawModel.split('/')[0]);
+          const m = rawModel.includes('/') ? normalizeModel(provider, rawModel.split('/').slice(1).join('/')) : normalizeModel('anthropic', rawModel);
+          normalizedModel = `${provider}/${m}`;
+        } else {
+          normalizedModel = 'unknown/unknown';
+        }
       }
+      const tokens = getSessionTokens(sid);
+      const cost = getSessionCost(sid);
+      // Skip truly empty synthetic sessions (no cost, no tokens)
+      if (key.startsWith('jsonl:') && cost === 0 && tokens === 0) return null;
       return {
         key,
         label: s.label || resolveName(key),
         model: normalizedModel,
-        totalTokens: getSessionTokens(s.sessionId || key.split(':').pop()),
+        totalTokens: tokens,
         contextTokens: s.contextTokens || 0,
         kind: s.kind || (key.includes('group') ? 'group' : 'direct'),
         updatedAt: s.updatedAt || 0,
@@ -670,11 +712,11 @@ function getSessionsJson() {
         aborted: s.abortedLastRun || false,
         thinkingLevel: s.thinkingLevel || null,
         channel: s.channel || '-',
-        sessionId: s.sessionId || '-',
-        lastMessage: getLastMessage(s.sessionId || key),
-        cost: getSessionCost(s.sessionId || key)
+        sessionId: sid,
+        lastMessage: getLastMessage(sid),
+        cost
       };
-    });
+    }).filter(Boolean);
   } catch (e) { return []; }
 }
 
