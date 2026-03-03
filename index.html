@@ -1170,6 +1170,159 @@ body {
     transform: translateX(50px);
   }
 }
+
+/* ==================== KANBAN BOARD ==================== */
+.kanban-board {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+  align-items: start;
+}
+
+.kanban-col {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  display: flex;
+  flex-direction: column;
+  min-height: 200px;
+}
+
+.kanban-col-header {
+  padding: 12px 14px 10px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid var(--border);
+}
+
+.kanban-col-title {
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-secondary);
+}
+
+.kanban-col-count {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 7px;
+  border-radius: 20px;
+  background: var(--bg-tertiary);
+  color: var(--text-muted);
+}
+
+.kanban-col[data-kanban-col="backlog"] .kanban-col-count { background: rgba(161,161,170,0.15); color: var(--text-secondary); }
+.kanban-col[data-kanban-col="in-progress"] .kanban-col-count { background: rgba(99,102,241,0.15); color: var(--accent); }
+.kanban-col[data-kanban-col="review"] .kanban-col-count { background: rgba(245,158,11,0.15); color: var(--yellow); }
+.kanban-col[data-kanban-col="done"] .kanban-col-count { background: rgba(16,185,129,0.15); color: var(--green); }
+
+.kanban-col-body {
+  padding: 10px;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-height: 80px;
+  transition: background 0.15s;
+}
+
+.kanban-col-body.drag-over {
+  background: rgba(99, 102, 241, 0.07);
+  border-radius: 0 0 12px 12px;
+}
+
+.kanban-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 10px 12px;
+  cursor: pointer;
+  transition: border-color 0.15s, box-shadow 0.15s;
+  position: relative;
+}
+
+.kanban-card:hover {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 1px var(--accent-glow);
+}
+
+.kanban-card.dragging {
+  opacity: 0.35;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.4);
+}
+
+.kanban-card[draggable="true"] { cursor: grab; }
+.kanban-card[draggable="true"]:active { cursor: grabbing; }
+
+.kc-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-primary);
+  line-height: 1.4;
+  padding-right: 18px;
+}
+
+.kc-desc {
+  font-size: 11px;
+  color: var(--text-muted);
+  margin-top: 4px;
+  line-height: 1.4;
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+
+.kc-meta {
+  font-size: 11px;
+  color: var(--text-muted);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-top: 7px;
+}
+
+.kc-badge {
+  font-size: 10px;
+  font-weight: 600;
+  padding: 1px 6px;
+  border-radius: 10px;
+  border: 1px solid;
+}
+
+.kc-badge-agent { background: rgba(99,102,241,0.12); border-color: rgba(99,102,241,0.3); color: var(--accent); }
+.kc-badge-manual { background: rgba(16,185,129,0.1); border-color: rgba(16,185,129,0.25); color: var(--green); }
+.kc-badge-high { background: rgba(239,68,68,0.1); border-color: rgba(239,68,68,0.3); color: var(--red); }
+.kc-badge-medium { background: rgba(245,158,11,0.1); border-color: rgba(245,158,11,0.3); color: var(--yellow); }
+.kc-badge-low { background: rgba(161,161,170,0.1); border-color: rgba(161,161,170,0.2); color: var(--text-muted); }
+
+.kc-delete {
+  position: absolute;
+  top: 6px;
+  right: 7px;
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  font-size: 13px;
+  opacity: 0;
+  transition: opacity 0.15s;
+  padding: 2px 4px;
+  line-height: 1;
+}
+
+.kanban-card:hover .kc-delete { opacity: 1; }
+
+.kanban-col-empty {
+  padding: 20px 12px;
+  text-align: center;
+  font-size: 12px;
+  color: var(--text-muted);
+  font-style: italic;
+}
 </style>
 </head>
 <body>
@@ -1287,6 +1440,10 @@ body {
       <div class="nav-item" data-page="security">
         <span class="icon">🔒</span>
         <span class="nav-text">Security</span>
+      </div>
+      <div class="nav-item" data-page="tasks">
+        <span class="icon">📌</span>
+        <span class="nav-text">Task Board</span>
       </div>
     </nav>
     <div style="padding:16px;border-top:1px solid var(--border);margin-top:auto;">
@@ -2026,6 +2183,47 @@ body {
       </div>
     </div>
 
+    <div class="page" id="tasks">
+      <div class="page-header" style="display:flex;align-items:center;justify-content:space-between;">
+        <div>
+          <h1 class="page-title">Task Board</h1>
+          <p class="page-subtitle">Agent tasks and manual work items</p>
+        </div>
+        <button onclick="openAddTaskModal()" style="padding:8px 18px;background:linear-gradient(135deg,var(--accent),var(--purple));color:white;border:none;border-radius:8px;font-weight:600;cursor:pointer;font-size:13px;">+ Add Task</button>
+      </div>
+
+      <div class="kanban-board" id="kanbanBoard">
+        <div class="kanban-col" data-kanban-col="backlog">
+          <div class="kanban-col-header">
+            <span class="kanban-col-title">Backlog</span>
+            <span class="kanban-col-count" id="kbCount-backlog">0</span>
+          </div>
+          <div class="kanban-col-body" id="kbCol-backlog"></div>
+        </div>
+        <div class="kanban-col" data-kanban-col="in-progress">
+          <div class="kanban-col-header">
+            <span class="kanban-col-title">In Progress</span>
+            <span class="kanban-col-count" id="kbCount-in-progress">0</span>
+          </div>
+          <div class="kanban-col-body" id="kbCol-in-progress"></div>
+        </div>
+        <div class="kanban-col" data-kanban-col="review">
+          <div class="kanban-col-header">
+            <span class="kanban-col-title">Review</span>
+            <span class="kanban-col-count" id="kbCount-review">0</span>
+          </div>
+          <div class="kanban-col-body" id="kbCol-review"></div>
+        </div>
+        <div class="kanban-col" data-kanban-col="done">
+          <div class="kanban-col-header">
+            <span class="kanban-col-title">Done</span>
+            <span class="kanban-col-count" id="kbCount-done">0</span>
+          </div>
+          <div class="kanban-col-body" id="kbCol-done"></div>
+        </div>
+      </div>
+    </div>
+
   </main>
 </div>
 
@@ -2060,6 +2258,54 @@ body {
     <div style="padding:20px 24px;display:grid;grid-template-columns:1fr 1fr;gap:16px;" id="modalStats"></div>
     <div style="padding:0 24px 12px;"><h3 style="font-size:13px;font-weight:600;color:var(--text-secondary);text-transform:uppercase;letter-spacing:0.1em;">Recent Messages</h3></div>
     <div style="padding:0 24px 20px;overflow-y:auto;flex:1;max-height:400px;" id="modalMessages"></div>
+  </div>
+</div>
+
+<!-- Task Board: Add/Edit Task Modal -->
+<div id="taskModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:500;align-items:center;justify-content:center;" onclick="if(event.target===this)closeTaskModal()">
+  <div style="background:var(--bg-secondary);border:1px solid var(--border);border-radius:16px;width:90%;max-width:500px;">
+    <div style="padding:20px 24px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;">
+      <h2 style="font-size:18px;font-weight:700;" id="taskModalHeading">Add Task</h2>
+      <button onclick="closeTaskModal()" style="background:none;border:none;color:var(--text-secondary);font-size:24px;cursor:pointer;padding:4px 8px;">✕</button>
+    </div>
+    <div style="padding:24px;">
+      <input type="hidden" id="taskModalId">
+      <div style="margin-bottom:16px;">
+        <label style="display:block;font-size:12px;font-weight:600;color:var(--text-secondary);margin-bottom:6px;">Title *</label>
+        <input type="text" id="taskModalTitleInput" placeholder="Task title..." style="width:100%;padding:10px 14px;background:var(--bg-primary);border:1px solid var(--border);border-radius:8px;color:var(--text-primary);font-size:14px;">
+      </div>
+      <div style="margin-bottom:16px;">
+        <label style="display:block;font-size:12px;font-weight:600;color:var(--text-secondary);margin-bottom:6px;">Project</label>
+        <input type="text" id="taskModalProjectInput" placeholder="project-name" style="width:100%;padding:10px 14px;background:var(--bg-primary);border:1px solid var(--border);border-radius:8px;color:var(--text-primary);font-size:14px;">
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px;">
+        <div>
+          <label style="display:block;font-size:12px;font-weight:600;color:var(--text-secondary);margin-bottom:6px;">Status</label>
+          <select id="taskModalStatusSelect" style="width:100%;padding:10px 14px;background:var(--bg-primary);border:1px solid var(--border);border-radius:8px;color:var(--text-primary);font-size:14px;">
+            <option value="backlog">Backlog</option>
+            <option value="in-progress">In Progress</option>
+            <option value="review">Review</option>
+            <option value="done">Done</option>
+          </select>
+        </div>
+        <div>
+          <label style="display:block;font-size:12px;font-weight:600;color:var(--text-secondary);margin-bottom:6px;">Priority</label>
+          <select id="taskModalPrioritySelect" style="width:100%;padding:10px 14px;background:var(--bg-primary);border:1px solid var(--border);border-radius:8px;color:var(--text-primary);font-size:14px;">
+            <option value="low">Low</option>
+            <option value="medium" selected>Medium</option>
+            <option value="high">High</option>
+          </select>
+        </div>
+      </div>
+      <div style="margin-bottom:24px;">
+        <label style="display:block;font-size:12px;font-weight:600;color:var(--text-secondary);margin-bottom:6px;">Description</label>
+        <textarea id="taskModalDescTextarea" placeholder="Optional description..." style="width:100%;height:80px;padding:10px 14px;background:var(--bg-primary);border:1px solid var(--border);border-radius:8px;color:var(--text-primary);font-size:14px;resize:vertical;font-family:inherit;"></textarea>
+      </div>
+      <div style="display:flex;gap:12px;justify-content:flex-end;">
+        <button onclick="closeTaskModal()" style="padding:10px 20px;background:var(--bg-tertiary);color:var(--text-secondary);border:1px solid var(--border);border-radius:8px;font-weight:600;cursor:pointer;font-size:14px;">Cancel</button>
+        <button onclick="saveTask()" id="taskModalSaveBtn" style="padding:10px 20px;background:linear-gradient(135deg,var(--accent),var(--purple));color:white;border:none;border-radius:8px;font-weight:600;cursor:pointer;font-size:14px;">Save</button>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -2494,6 +2740,7 @@ function showApp() {
   setInterval(fetchMemoryFiles, 30000);
   setInterval(fetchKeyFiles, 30000);
   setInterval(() => { if (document.getElementById('agents')?.classList.contains('active')) fetchAgentTasks(); }, 30000);
+  setInterval(() => { if (document.getElementById('tasks')?.classList.contains('active')) fetchTaskBoard(); }, 30000);
 }
 
 function showLogin() {
@@ -3048,6 +3295,9 @@ document.querySelectorAll('.nav-item').forEach(item => {
     }
     if (page === 'agents') {
       fetchAgentTasks();
+    }
+    if (page === 'tasks') {
+      fetchTaskBoard();
     }
   });
 });
@@ -4754,6 +5004,7 @@ document.addEventListener('keydown', (e) => {
     document.getElementById('pauseBtn').click();
   } else if (e.key === 'Escape') {
     closeSessionModal();
+    closeTaskModal();
     toggleShortcuts(false);
   } else if (e.key === '/') {
     e.preventDefault();
@@ -5472,6 +5723,249 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   });
 });
+
+// ==================== TASK BOARD ====================
+
+let taskBoardData = [];
+let _dragTaskId = null;
+
+// Map agent/manual status → kanban column
+function taskToKanbanCol(task) {
+  if (task.source === 'manual') {
+    const valid = ['backlog', 'in-progress', 'review', 'done'];
+    return valid.includes(task.status) ? task.status : 'backlog';
+  }
+  // agent task: map agent statuses
+  const map = { running: 'in-progress', 'needs-review': 'review', done: 'done', merged: 'done', failed: 'done' };
+  return map[task.status] || 'backlog';
+}
+
+async function fetchTaskBoard() {
+  try {
+    const res = await authFetch(API_BASE + '/api/tasks');
+    taskBoardData = await res.json();
+    renderKanbanBoard();
+  } catch (e) {
+    console.error('Task board fetch error:', e);
+  }
+}
+
+function renderKanbanBoard() {
+  const cols = ['backlog', 'in-progress', 'review', 'done'];
+  const grouped = { backlog: [], 'in-progress': [], review: [], done: [] };
+
+  taskBoardData.forEach(task => {
+    const col = taskToKanbanCol(task);
+    if (grouped[col]) grouped[col].push(task);
+  });
+
+  cols.forEach(col => {
+    const body = document.getElementById('kbCol-' + col);
+    const countEl = document.getElementById('kbCount-' + col);
+    if (!body) return;
+
+    const tasks = grouped[col];
+    countEl.textContent = tasks.length;
+
+    if (tasks.length === 0) {
+      body.innerHTML = '<div class="kanban-col-empty">No tasks</div>';
+    } else {
+      body.innerHTML = tasks.map(t => buildTaskCard(t)).join('');
+    }
+
+    // Wire drag-and-drop on cards
+    body.querySelectorAll('.kanban-card[draggable="true"]').forEach(card => {
+      card.addEventListener('dragstart', e => {
+        _dragTaskId = card.dataset.taskId;
+        setTimeout(() => card.classList.add('dragging'), 0);
+        e.dataTransfer.effectAllowed = 'move';
+      });
+      card.addEventListener('dragend', () => {
+        card.classList.remove('dragging');
+        _dragTaskId = null;
+        document.querySelectorAll('.kanban-col-body').forEach(b => b.classList.remove('drag-over'));
+      });
+    });
+
+    // Wire click-to-edit on manual task cards
+    body.querySelectorAll('.kanban-card[data-source="manual"]').forEach(card => {
+      card.addEventListener('click', e => {
+        if (e.target.classList.contains('kc-delete')) return;
+        const task = taskBoardData.find(t => t.id === card.dataset.taskId);
+        if (task) openEditTaskModal(task);
+      });
+    });
+
+    // Wire delete buttons
+    body.querySelectorAll('.kc-delete').forEach(btn => {
+      btn.addEventListener('click', async e => {
+        e.stopPropagation();
+        const taskId = btn.closest('.kanban-card').dataset.taskId;
+        if (!confirm('Delete this task?')) return;
+        try {
+          await authFetch(API_BASE + '/api/tasks/' + encodeURIComponent(taskId), { method: 'DELETE' });
+          taskBoardData = taskBoardData.filter(t => t.id !== taskId);
+          renderKanbanBoard();
+        } catch {}
+      });
+    });
+
+    // Drop zone events
+    body.addEventListener('dragover', e => {
+      if (!_dragTaskId) return;
+      e.preventDefault();
+      e.dataTransfer.dropEffect = 'move';
+      body.classList.add('drag-over');
+    });
+    body.addEventListener('dragleave', e => {
+      if (!body.contains(e.relatedTarget)) body.classList.remove('drag-over');
+    });
+    body.addEventListener('drop', async e => {
+      e.preventDefault();
+      body.classList.remove('drag-over');
+      if (!_dragTaskId) return;
+      const task = taskBoardData.find(t => t.id === _dragTaskId);
+      if (!task || task.source !== 'manual') return; // only manual tasks are draggable
+      const targetCol = body.closest('[data-kanban-col]').dataset.kanbanCol;
+      if (taskToKanbanCol(task) === targetCol) return; // already in this col
+      try {
+        const res = await authFetch(API_BASE + '/api/tasks/' + encodeURIComponent(task.id), {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ status: targetCol })
+        });
+        const updated = await res.json();
+        const idx = taskBoardData.findIndex(t => t.id === task.id);
+        if (idx !== -1) taskBoardData[idx] = { ...updated, source: 'manual' };
+        renderKanbanBoard();
+      } catch {}
+    });
+  });
+}
+
+function buildTaskCard(task) {
+  const isManual = task.source === 'manual';
+  const title = task.title || task.id || '(untitled)';
+  const desc = task.description || '';
+  const project = task.project || (typeof task.repo === 'string' ? task.repo.replace(/.*\//, '') : '') || '';
+  const priority = task.priority || '';
+  const draggable = isManual ? 'draggable="true"' : '';
+  const deleteBtn = isManual ? `<button class="kc-delete" title="Delete">✕</button>` : '';
+  const sourceBadge = isManual
+    ? `<span class="kc-badge kc-badge-manual">manual</span>`
+    : `<span class="kc-badge kc-badge-agent">agent</span>`;
+  const priorityBadge = priority
+    ? `<span class="kc-badge kc-badge-${priority}">${priority}</span>`
+    : '';
+  const projectText = project ? `<span style="color:var(--text-muted);">${esc(project)}</span>` : '';
+
+  // For agent tasks, show status badge
+  let agentStatusHtml = '';
+  if (!isManual && task.status) {
+    const colors = { running: 'var(--accent)', 'needs-review': 'var(--yellow)', done: 'var(--green)', merged: 'var(--purple)', failed: 'var(--red)' };
+    const labels = { running: '▶ Running', 'needs-review': '👀 Review', done: '✓ Done', merged: '⛙ Merged', failed: '✗ Failed' };
+    const c = colors[task.status] || 'var(--text-muted)';
+    const l = labels[task.status] || task.status;
+    agentStatusHtml = `<span style="font-size:10px;font-weight:600;color:${c};">${l}</span>`;
+  }
+
+  const descHtml = desc ? `<div class="kc-desc">${esc(desc.replace(/^#[^\n]*\n?/, '').trim().slice(0, 120))}</div>` : '';
+
+  return `<div class="kanban-card" ${draggable} data-task-id="${esc(task.id)}" data-source="${isManual ? 'manual' : 'agent'}">
+    ${deleteBtn}
+    <div class="kc-title">${esc(title.replace(/^#[^\n]*\n?/, '').trim().slice(0, 80))}</div>
+    ${descHtml}
+    <div class="kc-meta">
+      ${sourceBadge}
+      ${agentStatusHtml}
+      ${priorityBadge}
+      ${projectText}
+    </div>
+  </div>`;
+}
+
+function esc(s) {
+  return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// ---- Task Modal ----
+
+function openAddTaskModal() {
+  document.getElementById('taskModalId').value = '';
+  document.getElementById('taskModalHeading').textContent = 'Add Task';
+  document.getElementById('taskModalTitleInput').value = '';
+  document.getElementById('taskModalProjectInput').value = '';
+  document.getElementById('taskModalStatusSelect').value = 'backlog';
+  document.getElementById('taskModalPrioritySelect').value = 'medium';
+  document.getElementById('taskModalDescTextarea').value = '';
+  const modal = document.getElementById('taskModal');
+  modal.style.display = 'flex';
+  setTimeout(() => document.getElementById('taskModalTitleInput').focus(), 50);
+}
+
+function openEditTaskModal(task) {
+  document.getElementById('taskModalId').value = task.id;
+  document.getElementById('taskModalHeading').textContent = 'Edit Task';
+  document.getElementById('taskModalTitleInput').value = task.title || '';
+  document.getElementById('taskModalProjectInput').value = task.project || '';
+  document.getElementById('taskModalStatusSelect').value = task.status || 'backlog';
+  document.getElementById('taskModalPrioritySelect').value = task.priority || 'medium';
+  document.getElementById('taskModalDescTextarea').value = task.description || '';
+  document.getElementById('taskModal').style.display = 'flex';
+}
+
+function closeTaskModal() {
+  document.getElementById('taskModal').style.display = 'none';
+}
+
+async function saveTask() {
+  const id = document.getElementById('taskModalId').value;
+  const title = document.getElementById('taskModalTitleInput').value.trim();
+  if (!title) { document.getElementById('taskModalTitleInput').focus(); return; }
+
+  const payload = {
+    title,
+    project: document.getElementById('taskModalProjectInput').value.trim(),
+    status: document.getElementById('taskModalStatusSelect').value,
+    priority: document.getElementById('taskModalPrioritySelect').value,
+    description: document.getElementById('taskModalDescTextarea').value.trim()
+  };
+
+  const btn = document.getElementById('taskModalSaveBtn');
+  btn.disabled = true;
+  btn.textContent = 'Saving…';
+
+  try {
+    let res;
+    if (id) {
+      res = await authFetch(API_BASE + '/api/tasks/' + encodeURIComponent(id), {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      const updated = await res.json();
+      if (!res.ok) throw new Error(updated.error || 'Failed to save');
+      const idx = taskBoardData.findIndex(t => t.id === id);
+      if (idx !== -1) taskBoardData[idx] = { ...updated, source: 'manual' };
+    } else {
+      res = await authFetch(API_BASE + '/api/tasks', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      const created = await res.json();
+      if (!res.ok) throw new Error(created.error || 'Failed to create');
+      taskBoardData.push({ ...created, source: 'manual' });
+    }
+    closeTaskModal();
+    renderKanbanBoard();
+  } catch (e) {
+    alert('Error: ' + e.message);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Save';
+  }
+}
 </script>
 </body>
 </html>
