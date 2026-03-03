@@ -61,6 +61,37 @@ const pricingFile = path.join(WORKSPACE_DIR, 'data', 'model_pricing_usd_per_mill
 
 const htmlPath = path.join(__dirname, 'index.html');
 
+function buildDocsDirs() {
+  const envDirs = (process.env.DOCS_DIRS || '')
+    .split(',')
+    .map(d => d.trim())
+    .filter(Boolean)
+    .map(d => d.startsWith('~') ? path.join(os.homedir(), d.slice(1)) : d)
+    .filter(d => { try { return fs.statSync(d).isDirectory(); } catch { return false; } });
+  if (envDirs.length) return envDirs;
+
+  const dirs = [];
+  // Scan agent workspaces for doc subdirs
+  const agentsDir = path.join(os.homedir(), 'clawd', 'agents');
+  try {
+    fs.readdirSync(agentsDir).forEach(agent => {
+      if (agent.startsWith('.')) return;
+      ['output', 'drafts', 'notes', 'research'].forEach(subdir => {
+        const p = path.join(agentsDir, agent, subdir);
+        try { if (fs.statSync(p).isDirectory()) dirs.push(p); } catch {}
+      });
+    });
+  } catch {}
+  // Project .agent dir
+  const agentDir = path.join(WORKSPACE_DIR, '.agent');
+  try { if (fs.statSync(agentDir).isDirectory()) dirs.push(agentDir); } catch {}
+  // ObsidianVault Research
+  const obsResearch = path.join(os.homedir(), 'Documents', 'ObsidianVault', 'Research');
+  try { if (fs.statSync(obsResearch).isDirectory()) dirs.push(obsResearch); } catch {}
+  return dirs;
+}
+const DOCS_DIRS = buildDocsDirs();
+
 const DEFAULT_MODEL_PRICING = {
   'anthropic/claude-opus-4-6': { input: 5.00, output: 25.00, cacheRead: 0.625, cacheWrite: 6.25 },
   'anthropic/claude-opus-4-5': { input: 15.00, output: 75.00, cacheRead: 1.875, cacheWrite: 18.75 },
@@ -3027,6 +3058,75 @@ const server = http.createServer((req, res) => {
         }
         return;
       }
+    }
+
+    // Documents API
+    if (req.url === '/api/docs' && req.method === 'GET') {
+      try {
+        const docs = [];
+        const MAX_DOCS = 2000;
+        function scanDocDir(dir, label, base) {
+          if (docs.length >= MAX_DOCS) return;
+          let entries;
+          try { entries = fs.readdirSync(dir); } catch { return; }
+          for (const entry of entries) {
+            if (docs.length >= MAX_DOCS) return;
+            if (entry.startsWith('.')) continue;
+            const full = path.join(dir, entry);
+            let stat;
+            try { stat = fs.statSync(full); } catch { continue; }
+            if (stat.isDirectory()) {
+              scanDocDir(full, label, base);
+            } else if (/\.(md|txt)$/i.test(entry)) {
+              docs.push({
+                path: full,
+                rel: path.relative(base, full),
+                label,
+                name: entry,
+                size: stat.size,
+                mtime: stat.mtimeMs
+              });
+            }
+          }
+        }
+        DOCS_DIRS.forEach(dir => scanDocDir(dir, path.basename(dir), dir));
+        docs.sort((a, b) => b.mtime - a.mtime);
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify(docs));
+      } catch (e) {
+        res.writeHead(500, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: e.message }));
+      }
+      return;
+    }
+
+    if (req.url.startsWith('/api/doc?') && req.method === 'GET') {
+      try {
+        const params = new URL(req.url, 'http://localhost').searchParams;
+        const reqPath = params.get('path');
+        if (!reqPath) {
+          res.writeHead(400, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ error: 'path required' }));
+          return;
+        }
+        const resolved = path.resolve(reqPath);
+        const allowed = DOCS_DIRS.some(dir => {
+          const resolvedDir = path.resolve(dir);
+          return resolved.startsWith(resolvedDir + path.sep) || resolved === resolvedDir;
+        });
+        if (!allowed) {
+          res.writeHead(403, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ error: 'Forbidden' }));
+          return;
+        }
+        const content = fs.readFileSync(resolved, 'utf8');
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ path: resolved, content }));
+      } catch (e) {
+        res.writeHead(e.code === 'ENOENT' ? 404 : 500, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: e.message }));
+      }
+      return;
     }
 
     if (req.url === '/api/live' || req.url.startsWith('/api/live?')) {

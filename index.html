@@ -1778,6 +1778,118 @@ body {
   padding-top: 8px;
   border-top: 1px solid var(--border);
 }
+
+/* ===== Documents Page ===== */
+.docs-layout {
+  display: grid;
+  grid-template-columns: 280px 1fr;
+  gap: 0;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  overflow: hidden;
+  min-height: 600px;
+  max-height: calc(100vh - 200px);
+}
+.docs-sidebar {
+  background: var(--bg-secondary);
+  border-right: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  min-width: 0;
+}
+.docs-search {
+  padding: 12px;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+.docs-search-input {
+  width: 100%;
+  padding: 8px 12px;
+  background: var(--bg-primary);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text-primary);
+  font-size: 13px;
+  font-family: inherit;
+}
+.docs-search-input:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+.docs-tree {
+  flex: 1;
+  overflow-y: auto;
+  padding: 8px 0;
+}
+.docs-group-label {
+  padding: 6px 12px;
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+  overflow: hidden;
+}
+.docs-file {
+  padding: 5px 12px 5px 20px;
+  font-size: 13px;
+  color: var(--text-secondary);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  white-space: nowrap;
+  overflow: hidden;
+}
+.docs-file:hover {
+  background: var(--bg-tertiary);
+  color: var(--text-primary);
+}
+.docs-file.active {
+  background: rgba(99, 102, 241, 0.15);
+  color: var(--accent);
+}
+.docs-file-icon { font-size: 12px; flex-shrink: 0; }
+.docs-file-name { overflow: hidden; text-overflow: ellipsis; }
+.docs-preview {
+  background: var(--bg-primary);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  min-width: 0;
+}
+.docs-preview-header {
+  padding: 10px 20px;
+  border-bottom: 1px solid var(--border);
+  background: var(--bg-secondary);
+  font-size: 12px;
+  color: var(--text-muted);
+  font-family: 'JetBrains Mono', monospace;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  flex-shrink: 0;
+}
+.docs-preview-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 24px;
+}
+.docs-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  color: var(--text-muted);
+  font-size: 14px;
+  flex-direction: column;
+  gap: 8px;
+}
 </style>
 </head>
 <body>
@@ -1911,6 +2023,10 @@ body {
       <div class="nav-item" data-page="team">
         <span class="icon">👥</span>
         <span class="nav-text">Team</span>
+      </div>
+      <div class="nav-item" data-page="docs">
+        <span class="icon">📄</span>
+        <span class="nav-text">Documents</span>
       </div>
     </nav>
     <div style="padding:16px;border-top:1px solid var(--border);margin-top:auto;">
@@ -2741,6 +2857,30 @@ body {
             <tr><td colspan="8" style="text-align:center;padding:32px;color:var(--text-muted);">Loading…</td></tr>
           </tbody>
         </table>
+      </div>
+    </div>
+
+    <!-- Documents Page -->
+    <div class="page" id="docs">
+      <div class="page-header">
+        <h1 class="page-title">Documents</h1>
+        <p class="page-subtitle" id="docsSubtitle">Searchable document library</p>
+      </div>
+      <div class="docs-layout">
+        <div class="docs-sidebar">
+          <div class="docs-search">
+            <input type="text" id="docsSearchInput" class="docs-search-input" placeholder="Search documents…" oninput="docsFilterTree()">
+          </div>
+          <div class="docs-tree" id="docsTree">
+            <div style="padding:16px;color:var(--text-muted);font-size:13px;">Loading…</div>
+          </div>
+        </div>
+        <div class="docs-preview" id="docsPreview">
+          <div class="docs-empty">
+            <span style="font-size:32px;">📄</span>
+            <span>Select a document to preview</span>
+          </div>
+        </div>
       </div>
     </div>
 
@@ -3873,6 +4013,9 @@ document.querySelectorAll('.nav-item').forEach(item => {
     }
     if (page === 'team') {
       fetchTeam();
+    }
+    if (page === 'docs') {
+      fetchDocs();
     }
   });
 });
@@ -7001,6 +7144,98 @@ async function teamMissionSave() {
     }
   } catch (e) {
     console.error('teamMissionSave:', e);
+  }
+}
+
+// ===== Documents Page =====
+
+let docsData = [];
+let docsActive = null;
+
+async function fetchDocs() {
+  const tree = document.getElementById('docsTree');
+  if (!tree) return;
+  if (docsData.length) { docsFilterTree(); return; }
+  tree.innerHTML = '<div style="padding:16px;color:var(--text-muted);font-size:13px;">Loading…</div>';
+  try {
+    const r = await authFetch(API_BASE + '/api/docs');
+    docsData = await r.json();
+    const labelCount = new Set(docsData.map(d => d.label)).size;
+    const subtitle = document.getElementById('docsSubtitle');
+    if (subtitle) subtitle.textContent = `${docsData.length} documents across ${labelCount} director${labelCount === 1 ? 'y' : 'ies'}`;
+    docsFilterTree();
+  } catch (e) {
+    tree.innerHTML = `<div style="padding:16px;color:var(--red);font-size:13px;">Error: ${esc(String(e.message || e))}</div>`;
+  }
+}
+
+function docsFilterTree() {
+  const q = (document.getElementById('docsSearchInput')?.value || '').toLowerCase().trim();
+  const filtered = q
+    ? docsData.filter(d => d.rel.toLowerCase().includes(q) || d.name.toLowerCase().includes(q))
+    : docsData;
+  renderDocsTree(filtered);
+}
+
+function renderDocsTree(docs) {
+  const tree = document.getElementById('docsTree');
+  if (!tree) return;
+  if (!docs.length) {
+    tree.innerHTML = '<div style="padding:16px;color:var(--text-muted);font-size:13px;">No documents found</div>';
+    return;
+  }
+  // Group by label, preserving insertion order (already sorted by mtime desc)
+  const groups = {};
+  docs.forEach(d => {
+    if (!groups[d.label]) groups[d.label] = [];
+    groups[d.label].push(d);
+  });
+  tree.innerHTML = Object.entries(groups).map(([label, files]) => {
+    const filesHtml = files.map(f => {
+      const isActive = docsActive && docsActive.path === f.path;
+      const icon = f.name.toLowerCase().endsWith('.md') ? '📝' : '📄';
+      return `<div class="docs-file${isActive ? ' active' : ''}" data-path="${esc(f.path)}" title="${esc(f.rel)}">
+        <span class="docs-file-icon">${icon}</span>
+        <span class="docs-file-name">${esc(f.name)}</span>
+      </div>`;
+    }).join('');
+    return `<div class="docs-group">
+      <div class="docs-group-label">📁 ${esc(label)} <span style="font-size:10px;font-weight:400;margin-left:4px;">${files.length}</span></div>
+      ${filesHtml}
+    </div>`;
+  }).join('');
+  tree.querySelectorAll('.docs-file').forEach(el => {
+    el.addEventListener('click', () => openDoc(el.dataset.path));
+  });
+}
+
+async function openDoc(filePath) {
+  docsActive = { path: filePath };
+  document.querySelectorAll('.docs-file').forEach(el => {
+    el.classList.toggle('active', el.dataset.path === filePath);
+  });
+  const preview = document.getElementById('docsPreview');
+  preview.innerHTML = `
+    <div class="docs-preview-header">${esc(filePath)}</div>
+    <div class="docs-preview-body"><div style="color:var(--text-muted);">Loading…</div></div>`;
+  try {
+    const r = await authFetch(API_BASE + '/api/doc?path=' + encodeURIComponent(filePath));
+    const data = await r.json();
+    if (!r.ok) throw new Error(data.error || 'Failed to load');
+    const isMarkdown = filePath.toLowerCase().endsWith('.md');
+    let bodyHtml;
+    if (isMarkdown && typeof marked !== 'undefined') {
+      try { bodyHtml = marked.parse(data.content); } catch { bodyHtml = '<pre style="white-space:pre-wrap;">' + esc(data.content) + '</pre>'; }
+    } else {
+      bodyHtml = '<pre style="white-space:pre-wrap;font-size:13px;font-family:\'JetBrains Mono\',monospace;color:var(--text-secondary);">' + esc(data.content) + '</pre>';
+    }
+    preview.innerHTML = `
+      <div class="docs-preview-header">${esc(filePath)}</div>
+      <div class="docs-preview-body md-content">${bodyHtml}</div>`;
+  } catch (e) {
+    preview.innerHTML = `
+      <div class="docs-preview-header">${esc(filePath)}</div>
+      <div class="docs-preview-body"><div style="color:var(--red);">Error: ${esc(String(e.message || e))}</div></div>`;
   }
 }
 </script>
