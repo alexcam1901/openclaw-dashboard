@@ -1317,6 +1317,52 @@ function formatLiveEvent(data) {
   return null;
 }
 
+function getTeamData() {
+  const openclawConfigPath = path.join(OPENCLAW_DIR, 'openclaw.json');
+  let agentList = [];
+  try {
+    const config = JSON.parse(fs.readFileSync(openclawConfigPath, 'utf8'));
+    agentList = (config.agents && config.agents.list) || [];
+  } catch { agentList = []; }
+
+  const agents = agentList.map(agent => {
+    const workspace = agent.workspace || '';
+    let identity = { name: agent.name || agent.id, emoji: '🤖', creature: '', vibe: '' };
+    let soulExcerpt = '';
+
+    try {
+      const content = fs.readFileSync(path.join(workspace, 'IDENTITY.md'), 'utf8');
+      const nameMatch = content.match(/\*\*Name:\*\*\s*(.+)/);
+      const creatureMatch = content.match(/\*\*Creature:\*\*\s*(.+)/);
+      const vibeMatch = content.match(/\*\*Vibe:\*\*\s*(.+)/);
+      const emojiMatch = content.match(/\*\*Emoji:\*\*\s*(.+)/);
+      identity = {
+        name: nameMatch ? nameMatch[1].trim() : (agent.name || agent.id),
+        creature: creatureMatch ? creatureMatch[1].trim() : '',
+        vibe: vibeMatch ? vibeMatch[1].trim() : '',
+        emoji: emojiMatch ? emojiMatch[1].trim() : '🤖',
+      };
+    } catch {}
+
+    try {
+      const soulContent = fs.readFileSync(path.join(workspace, 'SOUL.md'), 'utf8');
+      const lines = soulContent.split('\n').filter(l => l.trim() && !l.startsWith('#'));
+      soulExcerpt = lines.slice(0, 2).join(' ').slice(0, 200);
+    } catch {}
+
+    const modelParts = (agent.model || '').split('/');
+    const modelShort = modelParts[modelParts.length - 1] || '';
+
+    return { id: agent.id, name: agent.name || agent.id, model: modelShort, identity, soulExcerpt };
+  });
+
+  const missionPath = path.join(dataDir, 'mission.json');
+  let mission = { statement: '', updatedAt: null };
+  try { mission = JSON.parse(fs.readFileSync(missionPath, 'utf8')); } catch {}
+
+  return { agents, mission };
+}
+
 function getCronJobs() {
   try {
     if (!fs.existsSync(cronFile)) return [];
@@ -2185,6 +2231,29 @@ const server = http.createServer((req, res) => {
     if (req.url === '/api/crons') {
       res.writeHead(200, { 'Content-Type': 'application/json' });
       res.end(JSON.stringify(getCronJobs()));
+      return;
+    }
+    if (req.url === '/api/team' && req.method === 'GET') {
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify(getTeamData()));
+      return;
+    }
+    if (req.url === '/api/team/mission' && req.method === 'PUT') {
+      let body = '';
+      req.on('data', chunk => { body += chunk; });
+      req.on('end', () => {
+        try {
+          const { statement } = JSON.parse(body);
+          const mission = { statement: String(statement || '').slice(0, 2000), updatedAt: new Date().toISOString() };
+          const missionPath = path.join(dataDir, 'mission.json');
+          fs.writeFileSync(missionPath, JSON.stringify(mission, null, 2));
+          res.writeHead(200, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ ok: true, mission }));
+        } catch {
+          res.writeHead(400, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ error: 'Bad request' }));
+        }
+      });
       return;
     }
     if (req.url === '/api/git') {

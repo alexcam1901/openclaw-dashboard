@@ -1678,6 +1678,106 @@ body {
 }
 .cron-btn:hover:not(:disabled) { border-color: var(--accent); color: var(--accent); }
 .cron-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+.team-mission {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 20px 24px;
+  margin-bottom: 24px;
+}
+.team-mission-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+.team-mission-label {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+.team-mission-text {
+  font-size: 15px;
+  line-height: 1.65;
+  color: var(--text-primary);
+  white-space: pre-wrap;
+}
+.team-mission-edit {
+  width: 100%;
+  min-height: 100px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text-primary);
+  font-size: 14px;
+  font-family: inherit;
+  padding: 12px;
+  resize: vertical;
+  box-sizing: border-box;
+}
+.team-mission-edit:focus { outline: none; border-color: var(--accent); }
+.mission-actions { display: flex; gap: 8px; margin-top: 10px; }
+.mission-btn {
+  padding: 6px 14px;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: var(--bg-tertiary);
+  color: var(--text-secondary);
+  cursor: pointer;
+  font-size: 12px;
+  font-family: inherit;
+  transition: all 0.15s;
+}
+.mission-btn:hover { border-color: var(--accent); color: var(--accent); }
+.mission-btn-save { background: var(--accent); border-color: var(--accent); color: #fff; }
+.mission-btn-save:hover { background: var(--purple); border-color: var(--purple); color: #fff; }
+.team-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 16px;
+}
+.agent-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  transition: border-color 0.15s, transform 0.15s;
+}
+.agent-card:hover { border-color: var(--accent); transform: translateY(-2px); }
+.agent-emoji { font-size: 36px; line-height: 1; margin-bottom: 4px; }
+.agent-name { font-size: 16px; font-weight: 700; color: var(--text-primary); }
+.agent-model {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 10px;
+  font-family: 'JetBrains Mono', monospace;
+  font-weight: 500;
+  background: rgba(99,102,241,0.12);
+  color: var(--accent);
+  border: 1px solid rgba(99,102,241,0.25);
+  width: fit-content;
+}
+.agent-creature { font-size: 12px; color: var(--text-secondary); }
+.agent-vibe {
+  font-size: 11px;
+  color: var(--text-muted);
+  font-style: italic;
+}
+.agent-soul {
+  font-size: 12px;
+  color: var(--text-secondary);
+  line-height: 1.5;
+  margin-top: 4px;
+  padding-top: 8px;
+  border-top: 1px solid var(--border);
+}
 </style>
 </head>
 <body>
@@ -1807,6 +1907,10 @@ body {
       <div class="nav-item" data-page="calendar">
         <span class="icon">📅</span>
         <span class="nav-text">Calendar</span>
+      </div>
+      <div class="nav-item" data-page="team">
+        <span class="icon">👥</span>
+        <span class="nav-text">Team</span>
       </div>
     </nav>
     <div style="padding:16px;border-top:1px solid var(--border);margin-top:auto;">
@@ -2637,6 +2741,31 @@ body {
             <tr><td colspan="8" style="text-align:center;padding:32px;color:var(--text-muted);">Loading…</td></tr>
           </tbody>
         </table>
+      </div>
+    </div>
+
+    <div class="page" id="team">
+      <div class="page-header">
+        <h1 class="page-title">Team</h1>
+        <p class="page-subtitle">Agent org chart and mission statement</p>
+      </div>
+
+      <div class="team-mission">
+        <div class="team-mission-header">
+          <span class="team-mission-label">Mission Statement</span>
+          <button class="mission-btn" id="missionEditBtn" onclick="teamMissionEdit()">Edit</button>
+        </div>
+        <div id="teamMissionText" class="team-mission-text" style="color:var(--text-muted);">Loading…</div>
+        <textarea id="teamMissionInput" class="team-mission-edit" style="display:none;" placeholder="Enter your team mission statement…"></textarea>
+        <div id="teamMissionActions" class="mission-actions" style="display:none;">
+          <button class="mission-btn mission-btn-save" onclick="teamMissionSave()">Save</button>
+          <button class="mission-btn" onclick="teamMissionCancel()">Cancel</button>
+        </div>
+      </div>
+
+      <div class="cal-section-title">Agents</div>
+      <div id="teamGrid" class="team-grid">
+        <div style="color:var(--text-muted);font-size:14px;">Loading…</div>
       </div>
     </div>
 
@@ -3741,6 +3870,9 @@ document.querySelectorAll('.nav-item').forEach(item => {
     }
     if (page === 'calendar') {
       fetchCalendar();
+    }
+    if (page === 'team') {
+      fetchTeam();
     }
   });
 });
@@ -6770,6 +6902,106 @@ async function calRunCronJob(id, btn) {
     await authFetch(API_BASE + `/api/cron/${id}/run`, { method: 'POST' });
   } catch {}
   setTimeout(() => { btn.disabled = false; btn.textContent = orig; }, 2000);
+}
+
+let teamData = null;
+
+async function fetchTeam() {
+  try {
+    const r = await authFetch(API_BASE + '/api/team');
+    teamData = await r.json();
+    renderTeam();
+  } catch (e) {
+    console.error('fetchTeam:', e);
+  }
+}
+
+function renderTeam() {
+  if (!teamData) return;
+  renderTeamMission(teamData.mission);
+  renderTeamGrid(teamData.agents);
+}
+
+function renderTeamMission(mission) {
+  const el = document.getElementById('teamMissionText');
+  if (!el) return;
+  if (mission && mission.statement) {
+    el.textContent = mission.statement;
+    el.style.color = 'var(--text-primary)';
+  } else {
+    el.textContent = '(No mission statement set — click Edit to add one)';
+    el.style.color = 'var(--text-muted)';
+  }
+}
+
+function renderTeamGrid(agents) {
+  const grid = document.getElementById('teamGrid');
+  if (!grid) return;
+  if (!agents || !agents.length) {
+    grid.innerHTML = '<div style="color:var(--text-muted)">No agents configured in openclaw.json</div>';
+    return;
+  }
+  grid.innerHTML = agents.map(a => {
+    const emoji = (a.identity && a.identity.emoji) || '🤖';
+    const name = (a.identity && a.identity.name) || a.name;
+    const creature = (a.identity && a.identity.creature) || '';
+    const vibe = (a.identity && a.identity.vibe) || '';
+    const model = a.model || '';
+    const soul = a.soulExcerpt || '';
+    return `<div class="agent-card">
+      <div class="agent-emoji">${esc(emoji)}</div>
+      <div class="agent-name">${esc(name)}</div>
+      ${creature ? `<div class="agent-creature">${esc(creature)}</div>` : ''}
+      ${model ? `<span class="agent-model">${esc(model)}</span>` : ''}
+      ${vibe ? `<div class="agent-vibe">${esc(vibe)}</div>` : ''}
+      ${soul ? `<div class="agent-soul">${esc(soul)}</div>` : ''}
+    </div>`;
+  }).join('');
+}
+
+function teamMissionEdit() {
+  const text = document.getElementById('teamMissionText');
+  const input = document.getElementById('teamMissionInput');
+  const actions = document.getElementById('teamMissionActions');
+  const btn = document.getElementById('missionEditBtn');
+  input.value = (teamData && teamData.mission && teamData.mission.statement) || '';
+  text.style.display = 'none';
+  input.style.display = 'block';
+  actions.style.display = 'flex';
+  btn.style.display = 'none';
+  input.focus();
+}
+
+function teamMissionCancel() {
+  const text = document.getElementById('teamMissionText');
+  const input = document.getElementById('teamMissionInput');
+  const actions = document.getElementById('teamMissionActions');
+  const btn = document.getElementById('missionEditBtn');
+  text.style.display = 'block';
+  input.style.display = 'none';
+  actions.style.display = 'none';
+  btn.style.display = 'inline-flex';
+}
+
+async function teamMissionSave() {
+  const input = document.getElementById('teamMissionInput');
+  const statement = input.value.trim();
+  try {
+    const r = await authFetch(API_BASE + '/api/team/mission', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ statement })
+    });
+    const data = await r.json();
+    if (data.ok) {
+      if (!teamData) teamData = {};
+      teamData.mission = data.mission;
+      renderTeamMission(data.mission);
+      teamMissionCancel();
+    }
+  } catch (e) {
+    console.error('teamMissionSave:', e);
+  }
 }
 </script>
 </body>
