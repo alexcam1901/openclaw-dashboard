@@ -2708,6 +2708,141 @@ const server = http.createServer((req, res) => {
       return;
     }
 
+    // Task Board API: GET /api/tasks — combine agent + manual tasks
+    if (req.url === '/api/tasks' && req.method === 'GET') {
+      try {
+        const tasks = [];
+        const activeTasksFile = path.join(OPENCLAW_DIR, 'active-tasks.json');
+        if (fs.existsSync(activeTasksFile)) {
+          try {
+            const data = JSON.parse(fs.readFileSync(activeTasksFile, 'utf8'));
+            (data.tasks || []).forEach(t => tasks.push({ ...t, source: 'agent' }));
+          } catch {}
+        }
+        const manualTasksFile = path.join(dataDir, 'tasks.json');
+        if (fs.existsSync(manualTasksFile)) {
+          try {
+            const data = JSON.parse(fs.readFileSync(manualTasksFile, 'utf8'));
+            (data.tasks || []).forEach(t => tasks.push({ ...t, source: 'manual' }));
+          } catch {}
+        }
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify(tasks));
+      } catch (e) {
+        res.writeHead(500, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: e.message }));
+      }
+      return;
+    }
+
+    // Task Board API: POST /api/tasks — create manual task
+    if (req.url === '/api/tasks' && req.method === 'POST') {
+      let body = '';
+      req.on('data', chunk => { body += chunk; if (body.length > 65536) req.destroy(); });
+      req.on('end', () => {
+        try {
+          const task = JSON.parse(body);
+          if (!task.title) {
+            res.writeHead(400, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ error: 'title is required' }));
+            return;
+          }
+          const manualTasksFile = path.join(dataDir, 'tasks.json');
+          let data = { tasks: [] };
+          if (fs.existsSync(manualTasksFile)) {
+            try { data = JSON.parse(fs.readFileSync(manualTasksFile, 'utf8')); } catch {}
+          }
+          if (!Array.isArray(data.tasks)) data.tasks = [];
+          const newTask = {
+            id: crypto.randomBytes(8).toString('hex'),
+            title: String(task.title).slice(0, 200),
+            description: String(task.description || '').slice(0, 2000),
+            status: ['backlog', 'in-progress', 'review', 'done'].includes(task.status) ? task.status : 'backlog',
+            priority: ['low', 'medium', 'high'].includes(task.priority) ? task.priority : 'medium',
+            project: String(task.project || '').slice(0, 100),
+            createdAt: Date.now(),
+            updatedAt: Date.now()
+          };
+          data.tasks.push(newTask);
+          try { fs.mkdirSync(dataDir, { recursive: true }); } catch {}
+          fs.writeFileSync(manualTasksFile, JSON.stringify(data, null, 2));
+          res.writeHead(201, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify(newTask));
+        } catch (e) {
+          res.writeHead(400, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ error: e.message }));
+        }
+      });
+      return;
+    }
+
+    // Task Board API: PATCH /api/tasks/:id — update manual task
+    // Task Board API: DELETE /api/tasks/:id — delete manual task
+    const taskIdMatch = req.url.match(/^\/api\/tasks\/([^?/]+)(\?.*)?$/);
+    if (taskIdMatch) {
+      const taskId = decodeURIComponent(taskIdMatch[1]);
+      if (req.method === 'PATCH') {
+        let body = '';
+        req.on('data', chunk => { body += chunk; if (body.length > 65536) req.destroy(); });
+        req.on('end', () => {
+          try {
+            const updates = JSON.parse(body);
+            const manualTasksFile = path.join(dataDir, 'tasks.json');
+            if (!fs.existsSync(manualTasksFile)) {
+              res.writeHead(404, { 'Content-Type': 'application/json' });
+              res.end(JSON.stringify({ error: 'Task not found' }));
+              return;
+            }
+            const data = JSON.parse(fs.readFileSync(manualTasksFile, 'utf8'));
+            const idx = (data.tasks || []).findIndex(t => t.id === taskId);
+            if (idx === -1) {
+              res.writeHead(404, { 'Content-Type': 'application/json' });
+              res.end(JSON.stringify({ error: 'Task not found' }));
+              return;
+            }
+            if (updates.title !== undefined) data.tasks[idx].title = String(updates.title).slice(0, 200);
+            if (updates.description !== undefined) data.tasks[idx].description = String(updates.description).slice(0, 2000);
+            if (updates.project !== undefined) data.tasks[idx].project = String(updates.project).slice(0, 100);
+            if (['backlog', 'in-progress', 'review', 'done'].includes(updates.status)) data.tasks[idx].status = updates.status;
+            if (['low', 'medium', 'high'].includes(updates.priority)) data.tasks[idx].priority = updates.priority;
+            data.tasks[idx].updatedAt = Date.now();
+            fs.writeFileSync(manualTasksFile, JSON.stringify(data, null, 2));
+            res.writeHead(200, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify(data.tasks[idx]));
+          } catch (e) {
+            res.writeHead(400, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ error: e.message }));
+          }
+        });
+        return;
+      }
+      if (req.method === 'DELETE') {
+        try {
+          const manualTasksFile = path.join(dataDir, 'tasks.json');
+          if (!fs.existsSync(manualTasksFile)) {
+            res.writeHead(404, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ error: 'Task not found' }));
+            return;
+          }
+          const data = JSON.parse(fs.readFileSync(manualTasksFile, 'utf8'));
+          const idx = (data.tasks || []).findIndex(t => t.id === taskId);
+          if (idx === -1) {
+            res.writeHead(404, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ error: 'Task not found' }));
+            return;
+          }
+          data.tasks.splice(idx, 1);
+          fs.writeFileSync(manualTasksFile, JSON.stringify(data, null, 2));
+          res.writeHead(200, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ ok: true }));
+        } catch (e) {
+          res.writeHead(500, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ error: e.message }));
+        }
+        return;
+      }
+    }
+
     if (req.url === '/api/live' || req.url.startsWith('/api/live?')) {
       res.writeHead(200, {
         'Content-Type': 'text/event-stream',
