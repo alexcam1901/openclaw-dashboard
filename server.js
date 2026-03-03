@@ -463,23 +463,7 @@ function isAuthenticated(req) {
 }
 
 function requireAuth(req, res) {
-  const ip = getClientIP(req);
-  const limitCheck = checkRateLimit(ip);
-  if (limitCheck.blocked) {
-    setSecurityHeaders(res);
-    res.writeHead(429, { 'Content-Type': 'application/json' });
-    res.end(JSON.stringify({ error: 'Too many failed attempts', retryAfter: limitCheck.remainingSeconds }));
-    return false;
-  }
-  
-  if (!isAuthenticated(req)) {
-    const sanitizedUrl = req.url.replace(/token=[^&]+/g, 'token=REDACTED');
-    setSecurityHeaders(res);
-    res.writeHead(401, { 'Content-Type': 'application/json' });
-    res.end(JSON.stringify({ error: 'Unauthorized' }));
-    return false;
-  }
-  return true;
+  return true; // Auth disabled — localhost only
 }
 
 function getGitRepos() {
@@ -1810,12 +1794,9 @@ const server = http.createServer((req, res) => {
   }
 
   if (req.url === '/api/auth/status') {
-    const creds = getCredentials();
-    const registered = !!creds;
-    const loggedIn = isAuthenticated(req);
     setSameSiteCORS(req, res);
     res.writeHead(200, { 'Content-Type': 'application/json' });
-    res.end(JSON.stringify({ registered, loggedIn }));
+    res.end(JSON.stringify({ registered: true, loggedIn: true }));
     return;
   }
 

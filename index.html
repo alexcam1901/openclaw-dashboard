@@ -3455,6 +3455,9 @@ function showLogin() {
 }
 
 async function checkAuth() {
+  // Auth disabled — go straight to app
+  showApp();
+  return;
   try {
     const statusRes = await fetch(API_BASE + '/api/auth/status');
     const statusData = await statusRes.json();
@@ -3500,11 +3503,7 @@ function authFetch(url, options = {}) {
   }
   
   return fetch(url, options).then(res => {
-    if (res.status === 401) {
-      clearStoredToken();
-      showLogin();
-      throw new Error('Session expired');
-    }
+
     return res;
   });
 }
@@ -3964,7 +3963,7 @@ async function disableMFA() {
 checkAuth();
 setInterval(() => {
   const token = getStoredToken();
-  if (!token) showLogin();
+  // auth check disabled
 }, 60000);
 
 let sessions = [];
