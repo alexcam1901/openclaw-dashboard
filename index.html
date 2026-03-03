@@ -1499,6 +1499,185 @@ body {
 .md-content th { text-align: left; padding: 8px 12px; background: var(--bg-tertiary); color: var(--text-secondary); font-weight: 600; border: 1px solid var(--border); }
 .md-content td { padding: 8px 12px; border: 1px solid var(--border); color: var(--text-secondary); }
 .md-content blockquote { border-left: 3px solid var(--accent); padding-left: 16px; color: var(--text-secondary); margin-bottom: 12px; font-style: italic; }
+
+/* === Calendar / Cron Visualization === */
+.cal-stats {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 24px;
+}
+.cal-stat-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 16px 20px;
+  min-width: 110px;
+  flex: 1;
+}
+.cal-stat-value {
+  font-size: 28px;
+  font-weight: 700;
+  font-family: 'JetBrains Mono', monospace;
+  line-height: 1;
+  margin-bottom: 6px;
+}
+.cal-stat-label {
+  font-size: 11px;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  font-weight: 500;
+}
+.cal-section-title {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  margin-bottom: 12px;
+}
+.cal-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+.cal-legend-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--text-secondary);
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  padding: 4px 10px;
+  border-radius: 20px;
+}
+.cal-legend-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.cal-week-wrap {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  overflow: hidden;
+  margin-bottom: 24px;
+}
+.cal-week-header {
+  display: grid;
+  grid-template-columns: 50px repeat(7, 1fr);
+  background: var(--bg-tertiary);
+  border-bottom: 1px solid var(--border);
+}
+.cal-week-day-hdr {
+  padding: 10px 4px;
+  text-align: center;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  letter-spacing: 0.03em;
+}
+.cal-week-day-hdr.today { color: var(--accent); }
+.cal-week-body {
+  display: block;
+  max-height: 380px;
+  overflow-y: auto;
+}
+.cal-week-row {
+  display: grid;
+  grid-template-columns: 50px repeat(7, 1fr);
+  border-bottom: 1px solid rgba(42, 42, 58, 0.4);
+}
+.cal-week-row:last-child { border-bottom: none; }
+.cal-hour-lbl {
+  padding: 4px 8px;
+  font-size: 10px;
+  font-family: 'JetBrains Mono', monospace;
+  color: var(--text-muted);
+  text-align: right;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  border-right: 1px solid var(--border);
+  min-height: 26px;
+  flex-shrink: 0;
+}
+.cal-cell {
+  border-right: 1px solid rgba(42, 42, 58, 0.3);
+  min-height: 26px;
+  padding: 3px 5px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 3px;
+  align-items: center;
+}
+.cal-cell:last-child { border-right: none; }
+.cal-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  transition: transform 0.15s;
+  cursor: default;
+}
+.cal-dot:hover { transform: scale(2); cursor: pointer; }
+/* Cron jobs table */
+.cron-tbl {
+  width: 100%;
+  border-collapse: collapse;
+}
+.cron-tbl th {
+  background: var(--bg-tertiary);
+  padding: 10px 14px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  text-align: left;
+  border-bottom: 1px solid var(--border);
+}
+.cron-tbl td {
+  padding: 12px 14px;
+  font-size: 13px;
+  border-bottom: 1px solid rgba(42, 42, 58, 0.5);
+  vertical-align: middle;
+}
+.cron-tbl tr:last-child td { border-bottom: none; }
+.cron-tbl tr:hover td { background: rgba(255,255,255,0.02); }
+.cbadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border-radius: 5px;
+  font-size: 11px;
+  font-weight: 600;
+  border: 1px solid transparent;
+}
+.cbadge.on  { background: rgba(16,185,129,0.15); color: var(--green);        border-color: rgba(16,185,129,0.25); }
+.cbadge.off { background: rgba(113,113,122,0.10); color: var(--text-muted);  border-color: rgba(113,113,122,0.20); }
+.cbadge.ok  { background: rgba(16,185,129,0.10); color: var(--green);        border-color: rgba(16,185,129,0.20); }
+.cbadge.err { background: rgba(239,68,68,0.10);  color: var(--red);          border-color: rgba(239,68,68,0.20); }
+.cbadge.unk { background: rgba(113,113,122,0.08); color: var(--text-muted); border-color: rgba(113,113,122,0.15); }
+.cron-btn {
+  padding: 4px 10px;
+  border-radius: 5px;
+  border: 1px solid var(--border);
+  background: var(--bg-tertiary);
+  color: var(--text-secondary);
+  cursor: pointer;
+  font-size: 11px;
+  font-family: inherit;
+  transition: all 0.15s;
+  margin-right: 4px;
+}
+.cron-btn:hover:not(:disabled) { border-color: var(--accent); color: var(--accent); }
+.cron-btn:disabled { opacity: 0.4; cursor: not-allowed; }
 </style>
 </head>
 <body>
@@ -1624,6 +1803,10 @@ body {
       <div class="nav-item" data-page="projects">
         <span class="icon">🗂️</span>
         <span class="nav-text">Projects</span>
+      </div>
+      <div class="nav-item" data-page="calendar">
+        <span class="icon">📅</span>
+        <span class="nav-text">Calendar</span>
       </div>
     </nav>
     <div style="padding:16px;border-top:1px solid var(--border);margin-top:auto;">
@@ -2412,6 +2595,48 @@ body {
       </div>
       <div id="projectsGrid" class="projects-grid">
         <div style="color:var(--text-muted);font-size:14px;">Loading projects…</div>
+      </div>
+    </div>
+
+    <!-- Calendar Page -->
+    <div class="page" id="calendar">
+      <div class="page-header">
+        <h1 class="page-title">Calendar</h1>
+        <p class="page-subtitle">Cron job schedule visualization</p>
+      </div>
+
+      <div id="calStats" class="cal-stats">
+        <div style="color:var(--text-muted);font-size:14px;padding:16px;">Loading…</div>
+      </div>
+
+      <div class="cal-section-title">Weekly Timeline</div>
+      <div id="calLegend" class="cal-legend"></div>
+      <div class="cal-week-wrap">
+        <div class="cal-week-header" id="calWeekHeader"></div>
+        <div class="cal-week-body" id="calWeekBody">
+          <div style="padding:32px;text-align:center;color:var(--text-muted);">Loading…</div>
+        </div>
+      </div>
+
+      <div class="cal-section-title">Scheduled Jobs</div>
+      <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:12px;overflow:hidden;overflow-x:auto;">
+        <table class="cron-tbl">
+          <thead>
+            <tr>
+              <th style="width:18px;"></th>
+              <th>Job</th>
+              <th>Schedule</th>
+              <th>Status</th>
+              <th>Last Run</th>
+              <th>Next Run</th>
+              <th>Duration</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="calCronBody">
+            <tr><td colspan="8" style="text-align:center;padding:32px;color:var(--text-muted);">Loading…</td></tr>
+          </tbody>
+        </table>
       </div>
     </div>
 
@@ -3513,6 +3738,9 @@ document.querySelectorAll('.nav-item').forEach(item => {
     }
     if (page === 'projects') {
       fetchProjects();
+    }
+    if (page === 'calendar') {
+      fetchCalendar();
     }
   });
 });
@@ -6287,6 +6515,261 @@ function switchProjectTab(tab) {
   document.getElementById('projectModalContext').style.display = tab === 'context' ? 'block' : 'none';
   document.getElementById('ptab-status').classList.toggle('active',  tab === 'status');
   document.getElementById('ptab-context').classList.toggle('active', tab === 'context');
+}
+
+// ===== Calendar (Cron Visualization) =====
+
+let calCrons = [];
+const CAL_COLORS = [
+  '#6366f1','#10b981','#f59e0b','#ef4444',
+  '#a855f7','#06b6d4','#3b82f6','#f97316',
+  '#84cc16','#ec4899'
+];
+
+async function fetchCalendar() {
+  try {
+    const r = await authFetch(API_BASE + '/api/crons');
+    calCrons = await r.json();
+    renderCalendar();
+  } catch (e) {
+    console.error('fetchCalendar:', e);
+  }
+}
+
+function renderCalendar() {
+  renderCalStats();
+  renderCalWeekGrid();
+  renderCalCronTable();
+}
+
+function renderCalStats() {
+  const total   = calCrons.length;
+  const enabled = calCrons.filter(j => j.enabled).length;
+  const disabled = total - enabled;
+  const errors  = calCrons.filter(j => j.lastStatus === 'error').length;
+  const now     = Date.now();
+  const ran24h  = calCrons.filter(j => j.lastRunAt && (now - j.lastRunAt) < 86400000).length;
+  document.getElementById('calStats').innerHTML = `
+    <div class="cal-stat-card">
+      <div class="cal-stat-value" style="color:var(--text-primary)">${total}</div>
+      <div class="cal-stat-label">Total Jobs</div>
+    </div>
+    <div class="cal-stat-card">
+      <div class="cal-stat-value" style="color:var(--green)">${enabled}</div>
+      <div class="cal-stat-label">Enabled</div>
+    </div>
+    <div class="cal-stat-card">
+      <div class="cal-stat-value" style="color:var(--text-muted)">${disabled}</div>
+      <div class="cal-stat-label">Disabled</div>
+    </div>
+    <div class="cal-stat-card">
+      <div class="cal-stat-value" style="color:var(--accent)">${ran24h}</div>
+      <div class="cal-stat-label">Ran (24h)</div>
+    </div>
+    <div class="cal-stat-card">
+      <div class="cal-stat-value" style="color:${errors > 0 ? 'var(--red)' : 'var(--text-muted)'}">${errors}</div>
+      <div class="cal-stat-label">Errors</div>
+    </div>`;
+}
+
+// Expand a cron field ("*/2", "1,3,5", "9-17", "9", "*") into array of integers
+function expandCronField(field, min, max) {
+  if (field === '*') {
+    const out = [];
+    for (let i = min; i <= max; i++) out.push(i);
+    return out;
+  }
+  const out = new Set();
+  field.split(',').forEach(part => {
+    if (part.includes('/')) {
+      const [range, step] = part.split('/');
+      const stepN = parseInt(step) || 1;
+      let rMin = min, rMax = max;
+      if (range !== '*') {
+        const halves = range.split('-').map(Number);
+        rMin = halves[0]; rMax = isNaN(halves[1]) ? halves[0] : halves[1];
+      }
+      for (let i = rMin; i <= rMax; i += stepN) out.add(i);
+    } else if (part.includes('-')) {
+      const halves = part.split('-').map(Number);
+      for (let i = halves[0]; i <= halves[1]; i++) out.add(i);
+    } else {
+      const n = parseInt(part);
+      if (!isNaN(n)) out.add(n);
+    }
+  });
+  return Array.from(out).filter(v => v >= min && v <= max);
+}
+
+// Return hours (0-23) this job fires on the given day-of-week (0=Sun, 6=Sat)
+function calJobHoursForDay(job, dow) {
+  const raw = job.scheduleRaw;
+  if (!raw) return [];
+  const hours = new Set();
+
+  if (raw.kind === 'every' && raw.everyMs > 0) {
+    const intervalH = raw.everyMs / 3600000;
+    if (intervalH > 0 && intervalH <= 24) {
+      // Compute phase from anchor
+      let startH = 0;
+      if (raw.anchorMs) {
+        const d = new Date(raw.anchorMs);
+        startH = (d.getHours() + d.getMinutes() / 60) % intervalH;
+      }
+      for (let h = startH; h < 24; h += intervalH) {
+        hours.add(Math.floor(h));
+      }
+    }
+    // Intervals > 24h fire less than once a day — skip in grid
+
+  } else if (raw.kind === 'cron' && raw.expr) {
+    try {
+      const parts = raw.expr.trim().split(/\s+/);
+      if (parts.length === 5) {
+        const [, hourPart, , , dowPart] = parts;
+        // Check day-of-week (cron dow: 0=Sun, 7=Sun alias)
+        let dayOk = (dowPart === '*');
+        if (!dayOk) {
+          const allowed = expandCronField(dowPart, 0, 7).map(d => d % 7);
+          dayOk = allowed.includes(dow);
+        }
+        if (dayOk) {
+          expandCronField(hourPart, 0, 23).forEach(h => hours.add(h));
+        }
+      }
+    } catch {}
+  }
+
+  return Array.from(hours).sort((a, b) => a - b);
+}
+
+function renderCalWeekGrid() {
+  const DAY_NAMES = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+  const todayDow  = new Date().getDay();
+
+  // Header
+  let hdrHtml = '<div class="cal-hour-lbl" style="border-bottom:none;background:var(--bg-tertiary);"></div>';
+  DAY_NAMES.forEach((d, i) => {
+    const cls = i === todayDow ? ' today' : '';
+    hdrHtml += `<div class="cal-week-day-hdr${cls}">${d}</div>`;
+  });
+  document.getElementById('calWeekHeader').innerHTML = hdrHtml;
+
+  // Legend
+  document.getElementById('calLegend').innerHTML = calCrons.map((job, idx) => {
+    const color = CAL_COLORS[idx % CAL_COLORS.length];
+    return `<div class="cal-legend-item">
+      <div class="cal-legend-dot" style="background:${color}"></div>
+      <span>${esc(job.name)}</span>
+    </div>`;
+  }).join('');
+
+  // Build matrix [dow 0-6][hour 0-23] = [job indices]
+  const matrix = Array.from({ length: 7 }, () => Array.from({ length: 24 }, () => []));
+  calCrons.forEach((job, idx) => {
+    for (let dow = 0; dow < 7; dow++) {
+      calJobHoursForDay(job, dow).forEach(h => {
+        if (h >= 0 && h < 24) matrix[dow][h].push(idx);
+      });
+    }
+  });
+
+  // Render rows, skipping empty off-hours (before 7 and after 22)
+  let bodyHtml = '';
+  for (let h = 0; h < 24; h++) {
+    const hasAny = matrix.some(day => day[h].length > 0);
+    if (!hasAny && (h < 7 || h > 22)) continue;
+    const hLabel = String(h).padStart(2, '0') + ':00';
+    bodyHtml += `<div class="cal-week-row"><div class="cal-hour-lbl">${hLabel}</div>`;
+    for (let dow = 0; dow < 7; dow++) {
+      let dots = '';
+      matrix[dow][h].forEach(idx => {
+        const job = calCrons[idx];
+        const color = CAL_COLORS[idx % CAL_COLORS.length];
+        const opacity = job.enabled ? 1 : 0.3;
+        dots += `<div class="cal-dot" title="${esc(job.name)}" style="background:${color};opacity:${opacity};"></div>`;
+      });
+      bodyHtml += `<div class="cal-cell">${dots}</div>`;
+    }
+    bodyHtml += `</div>`;
+  }
+
+  document.getElementById('calWeekBody').innerHTML = bodyHtml ||
+    '<div style="padding:32px;text-align:center;color:var(--text-muted);">No jobs with visualizable schedules</div>';
+}
+
+function renderCalCronTable() {
+  const now = Date.now();
+  if (!calCrons.length) {
+    document.getElementById('calCronBody').innerHTML =
+      '<tr><td colspan="8" style="text-align:center;padding:32px;color:var(--text-muted);">No cron jobs found in ~/.openclaw/cron/jobs.json</td></tr>';
+    return;
+  }
+  document.getElementById('calCronBody').innerHTML = calCrons.map((job, idx) => {
+    const color    = CAL_COLORS[idx % CAL_COLORS.length];
+    const enBadge  = job.enabled
+      ? '<span class="cbadge on">● On</span>'
+      : '<span class="cbadge off">● Off</span>';
+    const stBadge  = job.lastStatus === 'ok'    ? '<span class="cbadge ok">ok</span>'
+                   : job.lastStatus === 'error' ? '<span class="cbadge err">error</span>'
+                   : '<span class="cbadge unk">—</span>';
+
+    const lastAge  = job.lastRunAt ? (now - job.lastRunAt) : -1;
+    const lastRun  = lastAge < 0         ? '—'
+                   : lastAge < 60000     ? 'just now'
+                   : lastAge < 3600000   ? Math.round(lastAge / 60000) + 'm ago'
+                   : lastAge < 86400000  ? Math.round(lastAge / 3600000) + 'h ago'
+                   : Math.round(lastAge / 86400000) + 'd ago';
+
+    const nextAgo  = (job.nextRunAt && job.nextRunAt > now)
+      ? formatTimeAgo(job.nextRunAt - now, true) : '—';
+
+    const dur      = job.lastDuration > 0
+      ? (job.lastDuration < 2000
+          ? job.lastDuration + 'ms'
+          : (job.lastDuration / 1000).toFixed(1) + 's')
+      : '—';
+
+    const runDis   = !job.enabled ? 'disabled ' : '';
+
+    return `<tr>
+      <td><div style="width:10px;height:10px;border-radius:50%;background:${color};margin:auto;"></div></td>
+      <td><span style="font-weight:600;">${esc(job.name)}</span></td>
+      <td><code style="font-size:12px;font-family:'JetBrains Mono',monospace;color:var(--accent);">${esc(job.schedule)}</code></td>
+      <td>${enBadge} ${stBadge}</td>
+      <td style="font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--text-secondary);">${lastRun}</td>
+      <td style="font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--text-secondary);">${nextAgo}</td>
+      <td style="font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--text-secondary);">${dur}</td>
+      <td>
+        <button class="cron-btn" onclick="calToggleCronJob('${job.id}', this)">${job.enabled ? 'Disable' : 'Enable'}</button>
+        <button class="cron-btn" ${runDis}onclick="calRunCronJob('${job.id}', this)">Run ▶</button>
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+async function calToggleCronJob(id, btn) {
+  btn.disabled = true;
+  try {
+    const r    = await authFetch(API_BASE + `/api/cron/${id}/toggle`, { method: 'POST' });
+    const data = await r.json();
+    if (data.success) {
+      const job = calCrons.find(j => j.id === id);
+      if (job) job.enabled = data.enabled;
+      renderCalendar();
+    }
+  } catch {}
+  btn.disabled = false;
+}
+
+async function calRunCronJob(id, btn) {
+  const orig = btn.textContent;
+  btn.disabled = true;
+  btn.textContent = '…';
+  try {
+    await authFetch(API_BASE + `/api/cron/${id}/run`, { method: 'POST' });
+  } catch {}
+  setTimeout(() => { btn.disabled = false; btn.textContent = orig; }, 2000);
 }
 </script>
 </body>

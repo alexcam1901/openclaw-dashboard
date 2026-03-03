@@ -1322,19 +1322,29 @@ function getCronJobs() {
     if (!fs.existsSync(cronFile)) return [];
     const data = JSON.parse(fs.readFileSync(cronFile, 'utf8'));
     return (data.jobs || []).map(j => {
-      let humanSchedule = j.schedule?.expr || '';
-      try {
-        const parts = humanSchedule.split(' ');
-        if (parts.length === 5) {
-          const [min, hour, dom, mon, dow] = parts;
-          const dowNames = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
-          let readable = '';
-          if (dow !== '*') readable = dowNames[parseInt(dow)] || dow;
-          if (hour !== '*' && min !== '*') readable += (readable ? ' ' : '') + `${hour.padStart(2,'0')}:${min.padStart(2,'0')}`;
-          if (j.schedule?.tz) readable += ` (${j.schedule.tz.split('/').pop()})`;
-          if (readable) humanSchedule = readable;
-        }
-      } catch {}
+      const sched = j.schedule || {};
+      let humanSchedule = '';
+      if (sched.kind === 'every' && sched.everyMs) {
+        const ms = sched.everyMs;
+        if (ms < 60000) humanSchedule = `every ${ms / 1000}s`;
+        else if (ms < 3600000) humanSchedule = `every ${ms / 60000}m`;
+        else if (ms < 86400000) humanSchedule = `every ${ms / 3600000}h`;
+        else humanSchedule = `every ${ms / 86400000}d`;
+      } else if (sched.kind === 'cron' && sched.expr) {
+        humanSchedule = sched.expr;
+        try {
+          const parts = sched.expr.split(' ');
+          if (parts.length === 5) {
+            const [min, hour, dom, mon, dow] = parts;
+            const dowNames = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+            let readable = '';
+            if (dow !== '*') readable = dowNames[parseInt(dow)] || dow;
+            if (hour !== '*' && min !== '*') readable += (readable ? ' ' : '') + `${hour.padStart(2,'0')}:${min.padStart(2,'0')}`;
+            if (sched.tz) readable += ` (${sched.tz.split('/').pop()})`;
+            if (readable) humanSchedule = readable;
+          }
+        } catch {}
+      }
       return {
         id: j.id,
         name: j.name || j.id.substring(0, 8),
@@ -1343,7 +1353,14 @@ function getCronJobs() {
         lastStatus: j.state?.lastStatus || 'unknown',
         lastRunAt: j.state?.lastRunAtMs || 0,
         nextRunAt: j.state?.nextRunAtMs || 0,
-        lastDuration: j.state?.lastDurationMs || 0
+        lastDuration: j.state?.lastDurationMs || 0,
+        scheduleRaw: {
+          kind: sched.kind || '',
+          everyMs: sched.everyMs || 0,
+          expr: sched.expr || '',
+          tz: sched.tz || '',
+          anchorMs: sched.anchorMs || 0
+        }
       };
     });
   } catch { return []; }
