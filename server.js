@@ -5,6 +5,22 @@ const os = require('os');
 const { exec } = require('child_process');
 const crypto = require('crypto');
 
+function execPromise(cmd, opts = {}) {
+  return new Promise((resolve) => {
+    exec(cmd, { timeout: 10000, ...opts }, (err, stdout) => {
+      resolve(err ? '' : (stdout || ''));
+    });
+  });
+}
+
+function readProjectsConfig() {
+  const configPath = path.join(os.homedir(), '.openclaw', 'projects.json');
+  try {
+    if (!fs.existsSync(configPath)) return { projects: {}, obsidianVault: '' };
+    return JSON.parse(fs.readFileSync(configPath, 'utf8'));
+  } catch { return { projects: {}, obsidianVault: '' }; }
+}
+
 const PORT = parseInt(process.env.DASHBOARD_PORT || '7001'); // 7000 conflicts with macOS AirPlay
 const OPENCLAW_DIR = process.env.OPENCLAW_DIR || path.join(os.homedir(), '.openclaw');
 const WORKSPACE_DIR = process.env.WORKSPACE_DIR || process.env.OPENCLAW_WORKSPACE || process.cwd();
@@ -315,7 +331,7 @@ function setSecurityHeaders(res) {
   res.setHeader('X-Content-Type-Options', 'nosniff');
   res.setHeader('X-Frame-Options', 'DENY');
   res.setHeader('X-XSS-Protection', '1; mode=block');
-  res.setHeader('Content-Security-Policy', "default-src 'self'; script-src 'self' 'unsafe-inline'; font-src 'self' https://fonts.gstatic.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' data:");
+  res.setHeader('Content-Security-Policy', "default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; font-src 'self' https://fonts.gstatic.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' data:");
   res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
   res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
 }
@@ -2705,6 +2721,90 @@ const server = http.createServer((req, res) => {
         res.writeHead(500, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify({ error: e.message }));
       }
+      return;
+    }
+
+    // Projects API: GET /api/projects
+    if ((req.url === '/api/projects' || req.url.startsWith('/api/projects?')) && req.method === 'GET') {
+      (async () => {
+        try {
+          const config = readProjectsConfig();
+          const vaultBase = config.obsidianVault || '';
+          const projectEntries = Object.entries(config.projects || {});
+
+          const projects = await Promise.all(projectEntries.map(async ([name, proj]) => {
+            const repoPath = proj.repo || '';
+
+            // Last commit
+            let lastCommit = null;
+            if (repoPath && fs.existsSync(repoPath)) {
+              const raw = await execPromise(`git -C "${repoPath}" log -1 --format="%H|%s|%ar|%an" 2>/dev/null`);
+              const parts = raw.trim().split('|');
+              if (parts.length >= 3) {
+                lastCommit = { hash: parts[0].slice(0, 7), subject: parts[1], age: parts[2], author: parts[3] || '' };
+              }
+            }
+
+            // GitHub remote
+            let ghRepo = null;
+            if (repoPath && fs.existsSync(repoPath)) {
+              const remote = await execPromise(`git -C "${repoPath}" remote get-url origin 2>/dev/null`);
+              const m = remote.trim().match(/github\.com[:/]([^/]+\/[^/\s.]+?)(?:\.git)?$/);
+              if (m) ghRepo = m[1];
+            }
+
+            // Open PRs + issues (parallel)
+            let openPRs = 0, openIssues = 0;
+            if (ghRepo) {
+              const [prRes, issueRes] = await Promise.all([
+                execPromise(`gh pr list -R "${ghRepo}" --state open --json number 2>/dev/null`),
+                execPromise(`gh issue list -R "${ghRepo}" --state open --json number 2>/dev/null`)
+              ]);
+              try { openPRs = JSON.parse(prRes.trim() || '[]').length; } catch {}
+              try { openIssues = JSON.parse(issueRes.trim() || '[]').length; } catch {}
+            }
+
+            // Obsidian docs
+            let contextMd = '', statusMd = '';
+            if (vaultBase && proj.obsidian) {
+              const obsDir = path.join(vaultBase, proj.obsidian);
+              try { contextMd = fs.readFileSync(path.join(obsDir, 'context.md'), 'utf8'); } catch {}
+              try { statusMd = fs.readFileSync(path.join(obsDir, 'status.md'), 'utf8'); } catch {}
+            }
+
+            // Worktree count
+            let worktreeCount = 0;
+            if (proj.worktrees) {
+              try {
+                worktreeCount = fs.readdirSync(proj.worktrees).filter(f => {
+                  try { return fs.statSync(path.join(proj.worktrees, f)).isDirectory(); } catch { return false; }
+                }).length;
+              } catch {}
+            }
+
+            return {
+              name,
+              repo: repoPath,
+              worktrees: proj.worktrees || '',
+              obsidian: proj.obsidian || '',
+              defaultBranch: proj.defaultBranch || 'main',
+              ghRepo,
+              lastCommit,
+              openPRs,
+              openIssues,
+              contextMd,
+              statusMd,
+              worktreeCount
+            };
+          }));
+
+          res.writeHead(200, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify(projects));
+        } catch (e) {
+          res.writeHead(500, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ error: e.message }));
+        }
+      })();
       return;
     }
 
