@@ -2535,73 +2535,6 @@ body {
 </head>
 <body>
 
-<div id="loginPage" style="display:none;position:fixed;inset:0;background:var(--bg-primary);z-index:9999;align-items:center;justify-content:center;">
-  <div style="max-width:400px;width:90%;background:var(--bg-card);border:1px solid var(--border);border-radius:16px;padding:40px;box-shadow:0 8px 32px rgba(0,0,0,0.3);">
-    <div style="text-align:center;margin-bottom:32px;">
-      <div style="font-size:48px;margin-bottom:16px;">🔐</div>
-      <h1 style="font-size:24px;font-weight:700;margin-bottom:8px;background:linear-gradient(135deg, var(--text-primary), var(--accent));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;" id="authTitle">Dashboard Login</h1>
-      <p style="color:var(--text-secondary);font-size:14px;" id="authSubtitle">Enter your credentials</p>
-    </div>
-    
-    <form id="registerForm" style="display:none;" onsubmit="return handleRegister(event)">
-      <div style="margin-bottom:16px;">
-        <input type="text" id="regUsername" placeholder="Username" style="width:100%;padding:14px;background:var(--bg-secondary);border:1px solid var(--border);border-radius:8px;color:var(--text-primary);font-size:14px;" autocomplete="username" required>
-      </div>
-      <div style="margin-bottom:16px;">
-        <input type="password" id="regPassword" placeholder="Password" style="width:100%;padding:14px;background:var(--bg-secondary);border:1px solid var(--border);border-radius:8px;color:var(--text-primary);font-size:14px;" autocomplete="new-password" required minlength="8">
-      </div>
-      <div style="margin-bottom:16px;">
-        <input type="password" id="regPasswordConfirm" placeholder="Confirm Password" style="width:100%;padding:14px;background:var(--bg-secondary);border:1px solid var(--border);border-radius:8px;color:var(--text-primary);font-size:14px;" autocomplete="new-password" required>
-      </div>
-      <div style="margin-bottom:20px;">
-        <div style="height:6px;background:var(--bg-primary);border-radius:3px;overflow:hidden;">
-          <div id="passwordStrengthBar" style="height:100%;width:0%;transition:all 0.3s;border-radius:3px;"></div>
-        </div>
-        <div id="passwordStrengthText" style="font-size:11px;color:var(--text-muted);margin-top:4px;">Password must be 8+ chars with at least 1 letter and 1 number</div>
-      </div>
-      <div id="registerError" style="display:none;color:var(--red);font-size:13px;margin-bottom:16px;padding:12px;background:rgba(239,68,68,0.1);border-radius:6px;border:1px solid rgba(239,68,68,0.3);"></div>
-      <button type="submit" id="registerBtn" style="width:100%;padding:14px;background:linear-gradient(135deg, var(--accent), var(--purple));color:#fff;border:none;border-radius:8px;font-size:15px;font-weight:600;cursor:pointer;transition:all 0.2s;">Create Account</button>
-    </form>
-    
-    <form id="loginForm" style="display:none;" onsubmit="return handleLogin(event)">
-      <div style="margin-bottom:16px;" id="usernameInputContainer">
-        <input type="text" id="username" placeholder="Username" style="width:100%;padding:14px;background:var(--bg-secondary);border:1px solid var(--border);border-radius:8px;color:var(--text-primary);font-size:14px;" autocomplete="username" required>
-      </div>
-      <div style="margin-bottom:16px;" id="passwordInputContainer">
-        <input type="password" id="password" placeholder="Password" style="width:100%;padding:14px;background:var(--bg-secondary);border:1px solid var(--border);border-radius:8px;color:var(--text-primary);font-size:14px;" autocomplete="current-password" required>
-      </div>
-      <div style="margin-bottom:16px;display:none;" id="totpInputContainer">
-        <input type="text" id="totpInput" placeholder="6-digit code" maxlength="6" pattern="[0-9]{6}" style="width:100%;padding:14px;background:var(--bg-secondary);border:1px solid var(--border);border-radius:8px;color:var(--text-primary);font-size:14px;font-family:'JetBrains Mono',monospace;text-align:center;letter-spacing:0.5em;" autocomplete="off" inputmode="numeric">
-      </div>
-      <div style="margin-bottom:16px;display:flex;align-items:center;gap:8px;">
-        <input type="checkbox" id="rememberMeCheckbox" style="width:16px;height:16px;cursor:pointer;">
-        <label for="rememberMeCheckbox" style="color:var(--text-secondary);font-size:14px;cursor:pointer;">Remember me (3 hours)</label>
-      </div>
-      <div id="loginError" style="display:none;color:var(--red);font-size:13px;margin-bottom:16px;padding:12px;background:rgba(239,68,68,0.1);border-radius:6px;border:1px solid rgba(239,68,68,0.3);"></div>
-      <button type="submit" id="loginBtn" style="width:100%;padding:14px;background:linear-gradient(135deg, var(--accent), var(--purple));color:#fff;border:none;border-radius:8px;font-size:15px;font-weight:600;cursor:pointer;transition:all 0.2s;">Login</button>
-      <div style="text-align:center;margin-top:16px;">
-        <a href="#" onclick="showRecoveryForm();return false;" style="color:var(--accent);font-size:13px;text-decoration:none;">Forgot password?</a>
-      </div>
-    </form>
-    
-    <form id="recoveryForm" style="display:none;" onsubmit="return handleRecovery(event)">
-      <div style="margin-bottom:16px;">
-        <input type="text" id="recoveryToken" placeholder="Recovery Token" style="width:100%;padding:14px;background:var(--bg-secondary);border:1px solid var(--border);border-radius:8px;color:var(--text-primary);font-size:14px;font-family:'JetBrains Mono',monospace;" required>
-        <div style="font-size:11px;color:var(--text-muted);margin-top:4px;">Check your server console or environment variables</div>
-      </div>
-      <div style="margin-bottom:16px;">
-        <input type="password" id="recoveryNewPassword" placeholder="New Password" style="width:100%;padding:14px;background:var(--bg-secondary);border:1px solid var(--border);border-radius:8px;color:var(--text-primary);font-size:14px;" required minlength="8">
-      </div>
-      <div style="margin-bottom:20px;">
-        <input type="password" id="recoveryNewPasswordConfirm" placeholder="Confirm New Password" style="width:100%;padding:14px;background:var(--bg-secondary);border:1px solid var(--border);border-radius:8px;color:var(--text-primary);font-size:14px;" required>
-      </div>
-      <div id="recoveryError" style="display:none;color:var(--red);font-size:13px;margin-bottom:16px;padding:12px;background:rgba(239,68,68,0.1);border-radius:6px;border:1px solid rgba(239,68,68,0.3);"></div>
-      <button type="submit" id="recoveryBtn" style="width:100%;padding:14px;background:linear-gradient(135deg, var(--accent), var(--purple));color:#fff;border:none;border-radius:8px;font-size:15px;font-weight:600;cursor:pointer;transition:all 0.2s;margin-bottom:12px;">Reset Password</button>
-      <button type="button" onclick="showLoginForm()" style="width:100%;padding:12px;background:var(--bg-secondary);color:var(--text-primary);border:1px solid var(--border);border-radius:8px;font-size:14px;font-weight:500;cursor:pointer;">← Back to Login</button>
-    </form>
-  </div>
-</div>
-
 <div class="app" id="mainApp" style="display:none;">
   <aside class="sidebar">
     <div class="sidebar-header">
@@ -2645,10 +2578,6 @@ body {
         <span class="icon">🤖</span>
         <span class="nav-text">Agents</span>
       </div>
-      <div class="nav-item" data-page="security">
-        <span class="icon">🔒</span>
-        <span class="nav-text">Security</span>
-      </div>
       <div class="nav-item" data-page="tasks">
         <span class="icon">📌</span>
         <span class="nav-text">Task Board</span>
@@ -2678,13 +2607,6 @@ body {
         <span class="nav-text">Timeline</span>
       </div>
     </nav>
-    <div style="padding:16px;border-top:1px solid var(--border);margin-top:auto;">
-      <div id="mfaStatusIndicator" style="padding:4px 8px;margin-bottom:8px;font-size:10px;text-align:center;border-radius:6px;display:none;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;"></div>
-      <div class="nav-item" onclick="handleLogout()" style="color:var(--red);margin-bottom:0;">
-        <span class="icon">🚪</span>
-        <span class="nav-text">Logout</span>
-      </div>
-    </div>
   </aside>
 
   <main class="main">
@@ -4165,14 +4087,12 @@ async function handleLogout() {
 }
 
 function showApp() {
-  document.getElementById('loginPage').style.display = 'none';
   document.getElementById('mainApp').style.display = 'flex';
   fetchData();
   fetchNewData();
   fetchHealthHistory();
   fetchMemoryFiles();
   fetchKeyFiles();
-  checkMFAStatus();
   
   if (localStorage.getItem('usageAutoRefresh') === '1') {
     const cb = document.getElementById('usageAutoRefresh');
@@ -4187,44 +4107,9 @@ function showApp() {
   setInterval(() => { if (document.getElementById('tasks')?.classList.contains('active')) fetchTaskBoard(); }, 30000);
 }
 
-function showLogin() {
-  document.getElementById('loginPage').style.display = 'flex';
-  document.getElementById('mainApp').style.display = 'none';
-}
-
-async function checkAuth() {
+function checkAuth() {
   // Auth disabled — go straight to app
   showApp();
-  return;
-  try {
-    const statusRes = await fetch(API_BASE + '/api/auth/status');
-    const statusData = await statusRes.json();
-    
-    const token = getStoredToken();
-    
-    if (token) {
-      const verifyRes = await fetch(API_BASE + '/api/sessions', {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-      if (verifyRes.ok) {
-        showApp();
-        return;
-      } else {
-        clearStoredToken();
-      }
-    }
-    
-    if (statusData.registered === false) {
-      showRegistrationForm();
-      showLogin();
-    } else {
-      showLoginForm();
-      showLogin();
-    }
-  } catch (err) {
-    showLoginForm();
-    showLogin();
-  }
 }
 
 function authFetch(url, options = {}) {
