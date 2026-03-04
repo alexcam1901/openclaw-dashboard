@@ -3009,6 +3009,54 @@ const server = http.createServer((req, res) => {
       return;
     }
 
+    // Pull Requests API: GET /api/prs
+    if ((req.url === '/api/prs' || req.url.startsWith('/api/prs?')) && req.method === 'GET') {
+      (async () => {
+        try {
+          const config = readProjectsConfig();
+          const projectEntries = Object.entries(config.projects || {});
+
+          const projects = await Promise.all(projectEntries.map(async ([name, proj]) => {
+            const repoPath = proj.repo || '';
+
+            // Resolve ghRepo from config or derive from git remote
+            let ghRepo = proj.ghRepo || null;
+            if (!ghRepo && repoPath && fs.existsSync(repoPath)) {
+              const remote = await execPromise(`git -C "${repoPath}" remote get-url origin 2>/dev/null`);
+              const m = remote.trim().match(/github\.com[:/]([^/]+\/[^/\s.]+?)(?:\.git)?$/);
+              if (m) ghRepo = m[1];
+            }
+
+            if (!ghRepo) return null;
+
+            const fields = 'number,title,author,headRefName,createdAt,updatedAt,labels,reviewDecision,isDraft';
+            const mergedFields = 'number,title,author,headRefName,mergedAt';
+
+            const [openRaw, mergedRaw] = await Promise.all([
+              execPromise(`gh pr list -R "${ghRepo}" --state open --json ${fields} --limit 50 2>/dev/null`),
+              execPromise(`gh pr list -R "${ghRepo}" --state merged --json ${mergedFields} --limit 5 2>/dev/null`)
+            ]);
+
+            let open = [], merged = [];
+            try { open = JSON.parse(openRaw.trim() || '[]'); } catch {}
+            try { merged = JSON.parse(mergedRaw.trim() || '[]'); } catch {}
+
+            return { name, ghRepo, open, merged };
+          }));
+
+          const filtered = projects.filter(Boolean);
+          const totalOpen = filtered.reduce((s, p) => s + p.open.length, 0);
+
+          res.writeHead(200, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ projects: filtered, totalOpen }));
+        } catch (e) {
+          res.writeHead(500, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ error: e.message }));
+        }
+      })();
+      return;
+    }
+
     // Task Board API: GET /api/tasks — combine agent + manual tasks
     if (req.url === '/api/tasks' && req.method === 'GET') {
       try {
