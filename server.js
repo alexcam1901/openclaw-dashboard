@@ -21,6 +21,68 @@ function readProjectsConfig() {
   } catch { return { projects: {}, obsidianVault: '' }; }
 }
 
+// Cache for GitHub issues: { data: [], fetchedAt: <timestamp> }
+let _ghIssuesCache = { data: null, fetchedAt: 0 };
+const GH_CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
+
+async function fetchGithubIssues() {
+  const now = Date.now();
+  if (_ghIssuesCache.data && (now - _ghIssuesCache.fetchedAt) < GH_CACHE_TTL_MS) {
+    return _ghIssuesCache.data;
+  }
+
+  const config = readProjectsConfig();
+  const projects = config.projects || {};
+  const allIssues = [];
+
+  for (const [projectName, projectInfo] of Object.entries(projects)) {
+    const repoPath = projectInfo.repo || projectInfo.path;
+    if (!repoPath) continue;
+
+    // Get GitHub remote URL
+    const remoteUrl = await execPromise(`git -C ${JSON.stringify(repoPath)} remote get-url origin`);
+    if (!remoteUrl) continue;
+
+    // Parse owner/repo from remote URL
+    // Handles: https://github.com/owner/repo.git, git@github.com:owner/repo.git
+    const httpsMatch = remoteUrl.trim().match(/github\.com[/:]([^/]+\/[^/\s]+?)(?:\.git)?$/);
+    if (!httpsMatch) continue;
+    const ownerRepo = httpsMatch[1];
+
+    // Fetch open issues via gh CLI
+    let issuesJson;
+    try {
+      issuesJson = await execPromise(
+        `gh issue list --repo ${JSON.stringify(ownerRepo)} --state open --json number,title,labels,assignees,milestone,url,createdAt,updatedAt --limit 50`
+      );
+    } catch { continue; }
+    if (!issuesJson || !issuesJson.trim()) continue;
+
+    let issues;
+    try { issues = JSON.parse(issuesJson); } catch { continue; }
+    if (!Array.isArray(issues)) continue;
+
+    for (const issue of issues) {
+      allIssues.push({
+        id: `gh-${projectName}-${issue.number}`,
+        title: issue.title || '',
+        description: '',
+        project: projectName,
+        source: 'github',
+        status: 'open',
+        labels: (issue.labels || []).map(l => (typeof l === 'string' ? l : l.name)).filter(Boolean),
+        url: issue.url || '',
+        issueNumber: issue.number,
+        createdAt: issue.createdAt || '',
+        updatedAt: issue.updatedAt || ''
+      });
+    }
+  }
+
+  _ghIssuesCache = { data: allIssues, fetchedAt: Date.now() };
+  return allIssues;
+}
+
 const PORT = parseInt(process.env.DASHBOARD_PORT || '7001'); // 7000 conflicts with macOS AirPlay
 const OPENCLAW_DIR = process.env.OPENCLAW_DIR || path.join(os.homedir(), '.openclaw');
 const WORKSPACE_DIR = process.env.WORKSPACE_DIR || process.env.OPENCLAW_WORKSPACE || process.cwd();
@@ -3277,30 +3339,37 @@ const server = http.createServer((req, res) => {
       return;
     }
 
-    // Task Board API: GET /api/tasks — combine agent + manual tasks
+    // Task Board API: GET /api/tasks — combine agent + manual + github tasks
     if (req.url === '/api/tasks' && req.method === 'GET') {
-      try {
-        const tasks = [];
-        const activeTasksFile = path.join(OPENCLAW_DIR, 'active-tasks.json');
-        if (fs.existsSync(activeTasksFile)) {
+      (async () => {
+        try {
+          const tasks = [];
+          const activeTasksFile = path.join(OPENCLAW_DIR, 'active-tasks.json');
+          if (fs.existsSync(activeTasksFile)) {
+            try {
+              const data = JSON.parse(fs.readFileSync(activeTasksFile, 'utf8'));
+              (data.tasks || []).forEach(t => tasks.push({ ...t, source: 'agent' }));
+            } catch {}
+          }
+          const manualTasksFile = path.join(dataDir, 'tasks.json');
+          if (fs.existsSync(manualTasksFile)) {
+            try {
+              const data = JSON.parse(fs.readFileSync(manualTasksFile, 'utf8'));
+              (data.tasks || []).forEach(t => tasks.push({ ...t, source: 'manual' }));
+            } catch {}
+          }
+          // Fetch GitHub issues (cached)
           try {
-            const data = JSON.parse(fs.readFileSync(activeTasksFile, 'utf8'));
-            (data.tasks || []).forEach(t => tasks.push({ ...t, source: 'agent' }));
+            const ghIssues = await fetchGithubIssues();
+            ghIssues.forEach(i => tasks.push(i));
           } catch {}
+          res.writeHead(200, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify(tasks));
+        } catch (e) {
+          res.writeHead(500, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ error: e.message }));
         }
-        const manualTasksFile = path.join(dataDir, 'tasks.json');
-        if (fs.existsSync(manualTasksFile)) {
-          try {
-            const data = JSON.parse(fs.readFileSync(manualTasksFile, 'utf8'));
-            (data.tasks || []).forEach(t => tasks.push({ ...t, source: 'manual' }));
-          } catch {}
-        }
-        res.writeHead(200, { 'Content-Type': 'application/json' });
-        res.end(JSON.stringify(tasks));
-      } catch (e) {
-        res.writeHead(500, { 'Content-Type': 'application/json' });
-        res.end(JSON.stringify({ error: e.message }));
-      }
+      })();
       return;
     }
 
