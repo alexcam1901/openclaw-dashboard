@@ -4597,12 +4597,6 @@ async function disableMFA() {
   }
 }
 
-checkAuth();
-setInterval(() => {
-  const token = getStoredToken();
-  // auth check disabled
-}, 60000);
-
 let sessions = [];
 let costs = {};
 let usage = {};
@@ -4688,6 +4682,12 @@ document.querySelectorAll('.view-all-link').forEach(link => {
     if (tab) switchUsageTab(tab);
   });
 });
+
+checkAuth();
+setInterval(() => {
+  const token = getStoredToken();
+  // auth check disabled
+}, 60000);
 
 async function fetchData() {
   try {
@@ -6417,7 +6417,7 @@ window.onAgentSelectorChange = function() {
   window.fetchKeyFiles();
 };
 
-window.fetchKeyFiles = async function fetchKeyFiles() {
+async function fetchKeyFiles() {
   try {
     const url = API_BASE + '/api/key-files' + (_selectedAgent ? '?agent=' + encodeURIComponent(_selectedAgent) : '');
     const res = await authFetch(url);
@@ -6425,6 +6425,7 @@ window.fetchKeyFiles = async function fetchKeyFiles() {
     renderKeyFilesList();
   } catch {}
 }
+window.fetchKeyFiles = fetchKeyFiles;
 
 function renderKeyFilesList() {
   const el = document.getElementById('keyFilesList');
