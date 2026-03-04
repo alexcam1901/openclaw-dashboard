@@ -8320,7 +8320,7 @@ function tlToggleType(chip) {
     tlActiveTypes.add(type);
     chip.classList.add('active');
   }
-  if (tlData) renderTimeline(tlData);
+  if (tlData) renderActivityTimeline(tlData);
 }
 
 function tlToggleAgent(chip) {
@@ -8332,7 +8332,7 @@ function tlToggleAgent(chip) {
     tlActiveAgents.add(agent);
     chip.classList.add('active');
   }
-  if (tlData) renderTimeline(tlData);
+  if (tlData) renderActivityTimeline(tlData);
 }
 
 function tlRelTime(ts) {
@@ -8356,7 +8356,7 @@ function tlToggleCard(card) {
   card.classList.toggle('expanded');
 }
 
-function renderTimeline(data) {
+function renderActivityTimeline(data) {
   const content = document.getElementById('tlContent');
   if (!content) return;
 
@@ -8483,7 +8483,7 @@ async function fetchTimeline() {
     const until = new Date(now).toISOString();
     const r = await authFetch(API_BASE + '/api/activity-timeline?since=' + encodeURIComponent(since) + '&until=' + encodeURIComponent(until) + '&limit=500');
     tlData = await r.json();
-    renderTimeline(tlData);
+    renderActivityTimeline(tlData);
   } catch (e) {
     if (content) content.innerHTML = `<div class="tl-empty" style="color:var(--red);">Error loading timeline: ${esc(String(e.message || e))}</div>`;
   } finally {
