@@ -2078,6 +2078,184 @@ body {
   flex-direction: column;
   gap: 8px;
 }
+
+/* ── Pull Requests page ─────────────────────────────────────── */
+.pr-filter-bar {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 24px;
+}
+.pr-filter-btn {
+  padding: 6px 14px;
+  border-radius: 20px;
+  border: 1px solid var(--border);
+  background: var(--bg-card);
+  color: var(--text-secondary);
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.pr-filter-btn:hover { border-color: var(--accent); color: var(--text-primary); }
+.pr-filter-btn.active { background: var(--accent); border-color: var(--accent); color: #fff; }
+
+.pr-summary-bar {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 28px;
+}
+.pr-summary-stat {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 14px 20px;
+  min-width: 110px;
+  text-align: center;
+}
+.pr-summary-stat .stat-val {
+  font-size: 28px;
+  font-weight: 700;
+  color: var(--text-primary);
+  line-height: 1;
+}
+.pr-summary-stat .stat-lbl {
+  font-size: 11px;
+  color: var(--text-muted);
+  margin-top: 4px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.pr-project-section {
+  margin-bottom: 32px;
+}
+.pr-project-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--border);
+}
+.pr-project-name {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+.pr-project-repo {
+  font-size: 12px;
+  color: var(--text-muted);
+  font-family: 'JetBrains Mono', monospace;
+}
+.pr-project-count {
+  margin-left: auto;
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.pr-table {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.pr-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 14px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  transition: border-color 0.15s;
+  cursor: default;
+}
+.pr-row:hover { border-color: var(--accent); }
+.pr-row.pr-merged { opacity: 0.7; }
+
+.pr-num {
+  font-size: 12px;
+  color: var(--text-muted);
+  font-family: 'JetBrains Mono', monospace;
+  min-width: 44px;
+  flex-shrink: 0;
+}
+.pr-title {
+  flex: 1;
+  font-size: 13px;
+  color: var(--text-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.pr-title a {
+  color: inherit;
+  text-decoration: none;
+}
+.pr-title a:hover { color: var(--accent); }
+.pr-branch {
+  font-size: 11px;
+  color: var(--text-muted);
+  font-family: 'JetBrains Mono', monospace;
+  max-width: 160px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.pr-author {
+  font-size: 12px;
+  color: var(--text-secondary);
+  flex-shrink: 0;
+  max-width: 100px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.pr-age {
+  font-size: 11px;
+  color: var(--text-muted);
+  flex-shrink: 0;
+  min-width: 70px;
+  text-align: right;
+}
+
+.pr-badge {
+  font-size: 10px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 10px;
+  flex-shrink: 0;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.pr-badge-draft      { background: rgba(113,113,122,0.2); color: var(--text-muted); border: 1px solid rgba(113,113,122,0.3); }
+.pr-badge-approved   { background: rgba(16,185,129,0.15); color: var(--green); border: 1px solid rgba(16,185,129,0.3); }
+.pr-badge-changes    { background: rgba(239,68,68,0.12); color: var(--red); border: 1px solid rgba(239,68,68,0.3); }
+.pr-badge-review     { background: rgba(245,158,11,0.12); color: var(--yellow); border: 1px solid rgba(245,158,11,0.3); }
+.pr-badge-merged     { background: rgba(168,85,247,0.15); color: var(--purple); border: 1px solid rgba(168,85,247,0.3); }
+.pr-badge-open       { background: rgba(59,130,246,0.12); color: var(--blue); border: 1px solid rgba(59,130,246,0.3); }
+
+.pr-labels {
+  display: flex;
+  gap: 4px;
+  flex-shrink: 0;
+}
+.pr-label {
+  font-size: 10px;
+  padding: 2px 6px;
+  border-radius: 8px;
+  background: rgba(99,102,241,0.15);
+  color: var(--accent);
+  border: 1px solid rgba(99,102,241,0.3);
+}
+.pr-empty {
+  color: var(--text-muted);
+  font-size: 13px;
+  padding: 16px 0;
+  text-align: center;
+}
 </style>
 </head>
 <body>
@@ -2215,6 +2393,10 @@ body {
       <div class="nav-item" data-page="docs">
         <span class="icon">📄</span>
         <span class="nav-text">Documents</span>
+      </div>
+      <div class="nav-item" data-page="prs">
+        <span class="icon">🔀</span>
+        <span class="nav-text">Pull Requests</span>
       </div>
     </nav>
     <div style="padding:16px;border-top:1px solid var(--border);margin-top:auto;">
@@ -3106,6 +3288,25 @@ body {
       <div class="cal-section-title">Agents</div>
       <div id="teamGrid" class="team-grid">
         <div style="color:var(--text-muted);font-size:14px;">Loading…</div>
+      </div>
+    </div>
+
+    <!-- Pull Requests Page -->
+    <div class="page" id="prs">
+      <div class="page-header">
+        <h1 class="page-title">Pull Requests</h1>
+        <p class="page-subtitle" id="prsSubtitle">Open PRs across all projects</p>
+      </div>
+      <div class="pr-filter-bar" id="prFilterBar">
+        <button class="pr-filter-btn active" data-filter="all" onclick="prSetFilter('all')">All</button>
+        <button class="pr-filter-btn" data-filter="needs-review" onclick="prSetFilter('needs-review')">Needs Review</button>
+        <button class="pr-filter-btn" data-filter="draft" onclick="prSetFilter('draft')">Draft</button>
+        <button class="pr-filter-btn" data-filter="changes-requested" onclick="prSetFilter('changes-requested')">Changes Requested</button>
+        <button class="pr-filter-btn" data-filter="approved" onclick="prSetFilter('approved')">Approved</button>
+        <button class="pr-filter-btn" data-filter="merged" onclick="prSetFilter('merged')">Recently Merged</button>
+      </div>
+      <div id="prsContent">
+        <div style="color:var(--text-muted);font-size:14px;padding:32px;">Loading…</div>
       </div>
     </div>
 
@@ -4215,6 +4416,9 @@ document.querySelectorAll('.nav-item').forEach(item => {
     }
     if (page === 'docs') {
       fetchDocs();
+    }
+    if (page === 'prs') {
+      fetchPRs();
     }
   });
 });
@@ -7572,6 +7776,128 @@ async function openDoc(filePath) {
     preview.innerHTML = `
       <div class="docs-preview-header">${esc(filePath)}</div>
       <div class="docs-preview-body"><div style="color:var(--red);">Error: ${esc(String(e.message || e))}</div></div>`;
+  }
+}
+
+// ── Pull Requests ────────────────────────────────────────────────────────────
+
+let prsData = null;
+let prActiveFilter = 'all';
+
+function prTimeAgo(iso) {
+  if (!iso) return '';
+  const diff = Date.now() - new Date(iso).getTime();
+  if (diff < 3600000)  return Math.round(diff / 60000) + 'm ago';
+  if (diff < 86400000) return Math.round(diff / 3600000) + 'h ago';
+  return Math.round(diff / 86400000) + 'd ago';
+}
+
+function prBadge(pr, isMerged) {
+  if (isMerged) return '<span class="pr-badge pr-badge-merged">Merged</span>';
+  if (pr.isDraft) return '<span class="pr-badge pr-badge-draft">Draft</span>';
+  if (pr.reviewDecision === 'APPROVED') return '<span class="pr-badge pr-badge-approved">Approved</span>';
+  if (pr.reviewDecision === 'CHANGES_REQUESTED') return '<span class="pr-badge pr-badge-changes">Changes</span>';
+  if (pr.reviewDecision === 'REVIEW_REQUIRED') return '<span class="pr-badge pr-badge-review">Review</span>';
+  return '<span class="pr-badge pr-badge-open">Open</span>';
+}
+
+function prMatchesFilter(pr, filter, isMerged) {
+  if (filter === 'all') return !isMerged;
+  if (filter === 'merged') return isMerged;
+  if (filter === 'draft') return !isMerged && pr.isDraft;
+  if (filter === 'needs-review') return !isMerged && !pr.isDraft && pr.reviewDecision === 'REVIEW_REQUIRED';
+  if (filter === 'changes-requested') return !isMerged && pr.reviewDecision === 'CHANGES_REQUESTED';
+  if (filter === 'approved') return !isMerged && pr.reviewDecision === 'APPROVED';
+  return false;
+}
+
+function buildPRRow(pr, isMerged, ghRepo) {
+  const labels = (pr.labels || []).slice(0, 3).map(l =>
+    `<span class="pr-label">${esc(l.name || l)}</span>`
+  ).join('');
+  const branch = esc(pr.headRefName || '');
+  const author = esc(pr.author?.login || pr.author || '');
+  const age = prTimeAgo(isMerged ? pr.mergedAt : (pr.updatedAt || pr.createdAt));
+  const prUrl = ghRepo ? `https://github.com/${ghRepo}/pull/${pr.number}` : '#';
+  return `<div class="pr-row${isMerged ? ' pr-merged' : ''}">
+    <span class="pr-num">#${pr.number}</span>
+    ${prBadge(pr, isMerged)}
+    <span class="pr-title"><a href="${prUrl}" target="_blank" rel="noopener">${esc(pr.title)}</a></span>
+    ${branch ? `<span class="pr-branch" title="${branch}">${branch}</span>` : ''}
+    ${labels ? `<span class="pr-labels">${labels}</span>` : ''}
+    <span class="pr-author">${author}</span>
+    <span class="pr-age">${age}</span>
+  </div>`;
+}
+
+function renderPRs(data) {
+  const content = document.getElementById('prsContent');
+  if (!content) return;
+
+  const filter = prActiveFilter;
+  const projects = data.projects || [];
+
+  // Summary stats
+  const totalOpen = projects.reduce((s, p) => s + p.open.length, 0);
+  const totalDraft = projects.reduce((s, p) => s + p.open.filter(r => r.isDraft).length, 0);
+  const totalReview = projects.reduce((s, p) => s + p.open.filter(r => !r.isDraft && r.reviewDecision === 'REVIEW_REQUIRED').length, 0);
+  const totalChanges = projects.reduce((s, p) => s + p.open.filter(r => r.reviewDecision === 'CHANGES_REQUESTED').length, 0);
+  const totalApproved = projects.reduce((s, p) => s + p.open.filter(r => r.reviewDecision === 'APPROVED').length, 0);
+
+  const summaryHtml = `<div class="pr-summary-bar">
+    <div class="pr-summary-stat"><div class="stat-val">${totalOpen}</div><div class="stat-lbl">Open</div></div>
+    <div class="pr-summary-stat"><div class="stat-val" style="color:var(--yellow)">${totalReview}</div><div class="stat-lbl">Needs Review</div></div>
+    <div class="pr-summary-stat"><div class="stat-val" style="color:var(--red)">${totalChanges}</div><div class="stat-lbl">Changes</div></div>
+    <div class="pr-summary-stat"><div class="stat-val" style="color:var(--green)">${totalApproved}</div><div class="stat-lbl">Approved</div></div>
+    <div class="pr-summary-stat"><div class="stat-val" style="color:var(--text-muted)">${totalDraft}</div><div class="stat-lbl">Draft</div></div>
+  </div>`;
+
+  const projectsHtml = projects.map(proj => {
+    const isMergedView = filter === 'merged';
+    const rows = isMergedView
+      ? proj.merged.filter(pr => prMatchesFilter(pr, filter, true))
+      : proj.open.filter(pr => prMatchesFilter(pr, filter, false));
+
+    if (!rows.length && !isMergedView && proj.open.length === 0) return '';
+    if (!rows.length) return '';
+
+    const count = rows.length;
+    const rowsHtml = rows.map(pr => buildPRRow(pr, isMergedView, proj.ghRepo)).join('');
+    return `<div class="pr-project-section">
+      <div class="pr-project-header">
+        <span class="pr-project-name">${esc(proj.name)}</span>
+        <span class="pr-project-repo">${esc(proj.ghRepo)}</span>
+        <span class="pr-project-count">${count} ${isMergedView ? 'merged' : 'open'}</span>
+      </div>
+      <div class="pr-table">${rowsHtml}</div>
+    </div>`;
+  }).join('');
+
+  content.innerHTML = summaryHtml + (projectsHtml || '<div class="pr-empty">No pull requests match this filter.</div>');
+
+  const subtitle = document.getElementById('prsSubtitle');
+  if (subtitle) subtitle.textContent = `${totalOpen} open PR${totalOpen === 1 ? '' : 's'} across ${projects.length} project${projects.length === 1 ? '' : 's'}`;
+}
+
+function prSetFilter(filter) {
+  prActiveFilter = filter;
+  document.querySelectorAll('.pr-filter-btn').forEach(b => {
+    b.classList.toggle('active', b.dataset.filter === filter);
+  });
+  if (prsData) renderPRs(prsData);
+}
+
+async function fetchPRs() {
+  const content = document.getElementById('prsContent');
+  if (!content) return;
+  if (prsData) { renderPRs(prsData); return; }
+  content.innerHTML = '<div style="color:var(--text-muted);font-size:14px;padding:32px;">Loading pull requests…</div>';
+  try {
+    const r = await authFetch(API_BASE + '/api/prs');
+    prsData = await r.json();
+    renderPRs(prsData);
+  } catch (e) {
+    content.innerHTML = `<div style="color:var(--red);font-size:14px;padding:32px;">Error: ${esc(String(e.message || e))}</div>`;
   }
 }
 </script>
