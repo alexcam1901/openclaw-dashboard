@@ -772,9 +772,11 @@ function getCostData() {
     const perModel = {};
     const perDay = {};
     const perSession = {};
+    const perAgent = {};
     let total = 0;
 
     for (const dir of getAllSessDirs()) {
+    const agentId = path.basename(path.dirname(dir));
     const files = fs.readdirSync(dir).filter(f => isSessionFile(f));
     for (const file of files) {
       const sid = extractSessionId(file);
@@ -797,6 +799,7 @@ function getCostData() {
           const modelKey = `${provider}/${model}`;
           perModel[modelKey] = (perModel[modelKey] || 0) + c;
           perDay[day] = (perDay[day] || 0) + c;
+          perAgent[agentId] = (perAgent[agentId] || 0) + c;
           scost += c;
           total += c;
         } catch {}
@@ -818,6 +821,7 @@ function getCostData() {
       today: Math.round((perDay[todayKey] || 0) * 100) / 100,
       week: Math.round(weekCost * 100) / 100,
       perModel,
+      perAgent,
       perDay: Object.fromEntries(Object.entries(perDay).sort((a, b) => b[0].localeCompare(a[0])).slice(0, 14)),
       perSession: (() => {
         let sidLabels = {};
