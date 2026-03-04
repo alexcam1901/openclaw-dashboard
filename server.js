@@ -1582,6 +1582,74 @@ function getMemoryFiles() {
   return files;
 }
 
+// Journal: multi-agent memory entries
+function buildJournalSources() {
+  try {
+    const configPath = path.join(OPENCLAW_DIR, 'openclaw.json');
+    if (!fs.existsSync(configPath)) return [];
+    const config = JSON.parse(fs.readFileSync(configPath, 'utf8'));
+    return (config.agents && config.agents.list || [])
+      .filter(a => a.id && a.workspace)
+      .map(a => ({ id: a.id, name: a.name || a.id, workspace: a.workspace }));
+  } catch { return []; }
+}
+
+function parseJournalFilename(filename) {
+  const m = filename.match(/^(\d{4}-\d{2}-\d{2})(?:-(.+))?\.md$/);
+  if (m) return { date: m[1], topic: m[2] || null };
+  return { date: null, topic: filename.replace(/\.md$/, '') };
+}
+
+function getJournalEntries() {
+  const sources = buildJournalSources();
+  const entries = [];
+  for (const src of sources) {
+    const memDir = path.join(src.workspace, 'memory');
+    const memMd = path.join(src.workspace, 'MEMORY.md');
+    try {
+      if (fs.existsSync(memMd)) {
+        const stat = fs.statSync(memMd);
+        entries.push({ agent: src.id, agentName: src.name, file: 'MEMORY.md', date: null, topic: 'MEMORY', pinned: true, modified: stat.mtimeMs, size: stat.size });
+      }
+    } catch {}
+    try {
+      if (fs.existsSync(memDir)) {
+        for (const f of fs.readdirSync(memDir).filter(f => f.endsWith('.md'))) {
+          try {
+            const stat = fs.statSync(path.join(memDir, f));
+            const { date, topic } = parseJournalFilename(f);
+            entries.push({ agent: src.id, agentName: src.name, file: 'memory/' + f, date, topic, pinned: false, modified: stat.mtimeMs, size: stat.size });
+          } catch {}
+        }
+      }
+    } catch {}
+  }
+  entries.sort((a, b) => {
+    if (a.pinned && !b.pinned) return -1;
+    if (!a.pinned && b.pinned) return 1;
+    if (a.date && b.date) return b.date.localeCompare(a.date);
+    if (a.date && !b.date) return -1;
+    if (!a.date && b.date) return 1;
+    return b.modified - a.modified;
+  });
+  return entries;
+}
+
+function getJournalSources() {
+  return buildJournalSources().map(s => ({ id: s.id, name: s.name }));
+}
+
+function getJournalFilePath(agentId, filePath) {
+  const sources = buildJournalSources();
+  const src = sources.find(s => s.id === agentId);
+  if (!src) return null;
+  if (filePath.includes('..')) return null;
+  if (filePath === 'MEMORY.md') return path.join(src.workspace, 'MEMORY.md');
+  if (filePath === 'HEARTBEAT.md') return path.join(src.workspace, 'HEARTBEAT.md');
+  if (/^memory\/[^/]+\.md$/.test(filePath)) return path.join(src.workspace, filePath);
+  return null;
+}
+
 function getKeyFiles() {
   const files = [];
   for (const fname of workspaceFilenames) {
@@ -2640,6 +2708,41 @@ const server = http.createServer((req, res) => {
           res.end('File not found');
         }
       } catch (e) {
+        res.writeHead(400, { 'Content-Type': 'text/plain' });
+        res.end('Bad request');
+      }
+      return;
+    }
+    if (req.url === '/api/journal-entries') {
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify(getJournalEntries()));
+      return;
+    }
+    if (req.url === '/api/journal-sources') {
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify(getJournalSources()));
+      return;
+    }
+    if (req.url.startsWith('/api/journal-file?')) {
+      try {
+        const params = new URL(req.url, 'http://localhost').searchParams;
+        const agentId = params.get('agent') || '';
+        const filePath = params.get('file') || '';
+        const fpath = getJournalFilePath(agentId, filePath);
+        if (!fpath) {
+          res.writeHead(403, { 'Content-Type': 'text/plain' });
+          res.end('Forbidden');
+          return;
+        }
+        if (!fs.existsSync(fpath)) {
+          res.writeHead(404, { 'Content-Type': 'text/plain' });
+          res.end('File not found');
+          return;
+        }
+        const content = fs.readFileSync(fpath, 'utf8');
+        res.writeHead(200, { 'Content-Type': 'text/plain' });
+        res.end(content);
+      } catch {
         res.writeHead(400, { 'Content-Type': 'text/plain' });
         res.end('Bad request');
       }

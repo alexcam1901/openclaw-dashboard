@@ -1779,6 +1779,194 @@ body {
   border-top: 1px solid var(--border);
 }
 
+/* ===== Memory Journal Page ===== */
+.journal-layout {
+  display: grid;
+  grid-template-columns: 300px 1fr;
+  gap: 16px;
+  height: calc(100vh - 180px);
+  min-height: 500px;
+}
+
+.journal-sidebar {
+  display: flex;
+  flex-direction: column;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.journal-agent-tabs {
+  display: flex;
+  gap: 2px;
+  padding: 10px 10px 0;
+  border-bottom: 1px solid var(--border);
+  flex-wrap: wrap;
+  background: var(--bg-secondary);
+}
+
+.journal-tab {
+  padding: 5px 11px;
+  border-radius: 6px 6px 0 0;
+  border: 1px solid transparent;
+  background: none;
+  color: var(--text-muted);
+  font-size: 11px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s;
+  font-family: inherit;
+  white-space: nowrap;
+}
+
+.journal-tab:hover {
+  color: var(--text-secondary);
+  background: var(--bg-tertiary);
+}
+
+.journal-tab.active {
+  background: var(--bg-card);
+  color: var(--text-primary);
+  border-color: var(--border);
+  border-bottom-color: var(--bg-card);
+}
+
+.journal-search {
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--border);
+}
+
+.journal-search-input {
+  width: 100%;
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 7px 10px;
+  color: var(--text-primary);
+  font-size: 12px;
+  font-family: inherit;
+  outline: none;
+  transition: border-color 0.15s;
+}
+
+.journal-search-input:focus {
+  border-color: var(--accent);
+}
+
+.journal-timeline {
+  flex: 1;
+  overflow-y: auto;
+  padding: 6px 0 12px;
+}
+
+.journal-date-group {
+  margin-bottom: 2px;
+}
+
+.journal-date-label {
+  padding: 8px 14px 4px;
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  position: sticky;
+  top: 0;
+  background: var(--bg-card);
+  z-index: 1;
+}
+
+.journal-entry {
+  padding: 9px 14px;
+  cursor: pointer;
+  border-left: 3px solid transparent;
+  transition: background 0.12s;
+}
+
+.journal-entry:hover {
+  background: var(--bg-tertiary);
+}
+
+.journal-entry.active {
+  background: var(--bg-tertiary);
+  border-left-color: var(--accent);
+}
+
+.journal-entry-title {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-primary);
+  margin-bottom: 5px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.journal-entry-meta {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.journal-agent-badge {
+  padding: 1px 6px;
+  border-radius: 4px;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  flex-shrink: 0;
+}
+
+.journal-viewer {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.journal-viewer-header {
+  padding: 14px 20px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-shrink: 0;
+  background: var(--bg-secondary);
+}
+
+.journal-viewer-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text-primary);
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.journal-viewer-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 24px 28px;
+}
+
+.journal-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  gap: 12px;
+  color: var(--text-muted);
+  font-size: 14px;
+}
+
 /* ===== Documents Page ===== */
 .docs-layout {
   display: grid;
@@ -2572,17 +2760,29 @@ body {
     <div class="page" id="memory">
       <div class="page-header">
         <h1 class="page-title">Memory</h1>
-        <p class="page-subtitle">Agent memory files and daily notes</p>
+        <p class="page-subtitle">Journal across all agents</p>
       </div>
 
-      <div class="grid grid-2 mb-24">
-        <div class="card">
-          <h3 class="card-title">Memory Files</h3>
-          <div id="memoryFilesList" style="max-height:600px;overflow-y:auto;"></div>
+      <div class="journal-layout">
+        <!-- Left: timeline sidebar -->
+        <div class="journal-sidebar">
+          <div class="journal-agent-tabs" id="journalAgentTabs">
+            <button class="journal-tab active" data-agent="all" onclick="journalSetAgent('all')">All</button>
+          </div>
+          <div class="journal-search">
+            <input type="text" id="journalSearchInput" class="journal-search-input" placeholder="Search entries…" oninput="journalHandleSearch(this.value)">
+          </div>
+          <div class="journal-timeline" id="journalTimeline">
+            <div style="padding:16px;color:var(--text-muted);font-size:13px;">Loading…</div>
+          </div>
         </div>
-        <div class="card">
-          <h3 class="card-title" id="memoryFileTitle">Select a file</h3>
-          <div id="memoryFileContent" style="max-height:600px;overflow-y:auto;white-space:pre-wrap;font-family:'JetBrains Mono',monospace;font-size:12px;line-height:1.6;color:var(--text-primary);"></div>
+
+        <!-- Right: content viewer -->
+        <div class="journal-viewer" id="journalViewer">
+          <div class="journal-empty">
+            <span style="font-size:36px;">🧠</span>
+            <span>Select an entry to read</span>
+          </div>
         </div>
       </div>
     </div>
@@ -3993,7 +4193,7 @@ document.querySelectorAll('.nav-item').forEach(item => {
     }
     
     if (page === 'memory') {
-      fetchMemoryFiles();
+      fetchJournalEntries();
     }
     if (page === 'files') {
       fetchKeyFiles();
@@ -5502,55 +5702,192 @@ window.runCronJob = async function(id) {
   } catch (e) { console.error('New data fetch error:', e); }
 }
 
-// Memory page
-let memoryFiles = [];
-async function fetchMemoryFiles() {
+// Memory Journal page
+const JOURNAL_AGENT_COLORS = {
+  main: { bg: 'rgba(99,102,241,0.18)', color: '#818cf8' },
+  zoe: { bg: 'rgba(168,85,247,0.18)', color: '#c084fc' },
+  jamjar: { bg: 'rgba(16,185,129,0.18)', color: '#34d399' },
+  'ops-ozzy': { bg: 'rgba(245,158,11,0.18)', color: '#fbbf24' },
+  'research-lead': { bg: 'rgba(59,130,246,0.18)', color: '#60a5fa' },
+};
+function journalAgentStyle(agentId) {
+  const c = JOURNAL_AGENT_COLORS[agentId] || { bg: 'rgba(113,113,122,0.2)', color: '#a1a1aa' };
+  return `background:${c.bg};color:${c.color};`;
+}
+
+let journalEntries = [];
+let journalSources = [];
+let journalActiveAgent = 'all';
+let journalActiveKey = null;
+let journalSearchQ = '';
+
+async function fetchJournalEntries() {
   try {
-    const res = await authFetch(API_BASE + '/api/memory-files');
-    memoryFiles = await res.json();
-    renderMemoryFilesList();
+    const [entriesRes, sourcesRes] = await Promise.all([
+      authFetch(API_BASE + '/api/journal-entries'),
+      authFetch(API_BASE + '/api/journal-sources')
+    ]);
+    journalEntries = await entriesRes.json();
+    journalSources = await sourcesRes.json();
+    renderJournalTabs();
+    renderJournalTimeline();
   } catch {}
 }
 
-function renderMemoryFilesList() {
-  const el = document.getElementById('memoryFilesList');
+function renderJournalTabs() {
+  const el = document.getElementById('journalAgentTabs');
   if (!el) return;
-  const now = Date.now();
-  el.innerHTML = memoryFiles.map(f => {
-    const age = now - f.modified;
-    const ago = age < 60000 ? 'just now' : age < 3600000 ? Math.round(age/60000)+'m ago' : age < 86400000 ? Math.round(age/3600000)+'h ago' : Math.round(age/86400000)+'d ago';
-    const sizeKb = (f.size / 1024).toFixed(1);
-    const icon = f.name.includes('MEMORY') ? '🧠' : f.name.includes('HEARTBEAT') ? '💓' : '📄';
-    return `<div style="padding:12px;border-bottom:1px solid var(--border);cursor:pointer;transition:all 0.2s;" onclick="window.loadMemoryFile('${f.name}')" onmouseover="this.style.background='var(--bg-tertiary)'" onmouseout="this.style.background='transparent'">
-      <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;">
-        <span style="font-size:18px;">${icon}</span>
-        <span style="font-weight:600;font-size:13px;flex:1;">${f.name}</span>
-      </div>
-      <div style="font-size:11px;color:var(--text-muted);">${sizeKb} KB · ${ago}</div>
-    </div>`;
-  }).join('') || '<div class="empty-state-text">No memory files</div>';
+  const agentCounts = {};
+  for (const e of journalEntries) {
+    agentCounts[e.agent] = (agentCounts[e.agent] || 0) + 1;
+  }
+  let html = `<button class="journal-tab${journalActiveAgent === 'all' ? ' active' : ''}" data-agent="all" onclick="journalSetAgent('all')">All <span style="opacity:0.6;">${journalEntries.length}</span></button>`;
+  for (const src of journalSources) {
+    if (!agentCounts[src.id]) continue;
+    const isActive = journalActiveAgent === src.id;
+    const style = journalAgentStyle(src.id);
+    html += `<button class="journal-tab${isActive ? ' active' : ''}" data-agent="${src.id}" onclick="journalSetAgent('${src.id}')" style="${isActive ? style : ''}">${src.name} <span style="opacity:0.6;">${agentCounts[src.id]}</span></button>`;
+  }
+  el.innerHTML = html;
 }
 
-window.loadMemoryFile = async function(name) {
+function journalSetAgent(agentId) {
+  journalActiveAgent = agentId;
+  renderJournalTabs();
+  renderJournalTimeline();
+}
+
+function journalHandleSearch(q) {
+  journalSearchQ = q.trim().toLowerCase();
+  renderJournalTimeline();
+}
+
+function journalFilteredEntries() {
+  let entries = journalEntries;
+  if (journalActiveAgent !== 'all') entries = entries.filter(e => e.agent === journalActiveAgent);
+  if (journalSearchQ) {
+    entries = entries.filter(e =>
+      (e.topic || '').toLowerCase().includes(journalSearchQ) ||
+      (e.date || '').includes(journalSearchQ) ||
+      (e.agentName || '').toLowerCase().includes(journalSearchQ)
+    );
+  }
+  return entries;
+}
+
+function journalFormatDate(dateStr) {
   try {
-    const titleEl = document.getElementById('memoryFileTitle');
-    const contentEl = document.getElementById('memoryFileContent');
-    titleEl.textContent = name;
-    contentEl.innerHTML = '<div style="color:var(--text-muted);">Loading...</div>';
-    const res = await authFetch(API_BASE + '/api/memory-file?path=' + encodeURIComponent(name));
+    const d = new Date(dateStr + 'T12:00:00');
+    return d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' });
+  } catch { return dateStr; }
+}
+
+function journalEntryTitle(entry) {
+  if (entry.pinned) return 'MEMORY.md';
+  if (entry.topic) {
+    // If topic looks like a time (4 digits), label it as time
+    if (/^\d{4}$/.test(entry.topic)) return `${entry.date} · ${entry.topic}`;
+    return entry.topic.replace(/-/g, ' ');
+  }
+  return 'Daily notes';
+}
+
+function journalEntryKey(entry) {
+  return `${entry.agent}::${entry.file}`;
+}
+
+function renderJournalEntryHtml(entry) {
+  const key = journalEntryKey(entry);
+  const isActive = key === journalActiveKey;
+  const sizeKb = (entry.size / 1024).toFixed(1);
+  const age = Date.now() - entry.modified;
+  const ago = age < 60000 ? 'just now' : age < 3600000 ? Math.round(age/60000)+'m ago' : age < 86400000 ? Math.round(age/3600000)+'h ago' : Math.round(age/86400000)+'d ago';
+  const badgeStyle = journalAgentStyle(entry.agent);
+  const title = esc(journalEntryTitle(entry));
+  const safeKey = key.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+  return `<div class="journal-entry${isActive ? ' active' : ''}" onclick="loadJournalEntry('${safeKey}')">
+    <div class="journal-entry-title">${title}</div>
+    <div class="journal-entry-meta">
+      <span class="journal-agent-badge" style="${badgeStyle}">${esc(entry.agentName)}</span>
+      <span>${sizeKb} KB</span>
+      <span>${ago}</span>
+    </div>
+  </div>`;
+}
+
+function renderJournalTimeline() {
+  const entries = journalFilteredEntries();
+  const el = document.getElementById('journalTimeline');
+  if (!el) return;
+
+  const pinned = entries.filter(e => e.pinned);
+  const dated = entries.filter(e => !e.pinned && e.date);
+  const undated = entries.filter(e => !e.pinned && !e.date);
+
+  const groups = {};
+  for (const e of dated) {
+    if (!groups[e.date]) groups[e.date] = [];
+    groups[e.date].push(e);
+  }
+  const dates = Object.keys(groups).sort().reverse();
+
+  let html = '';
+  if (pinned.length) {
+    html += '<div class="journal-date-group"><div class="journal-date-label">Pinned</div>';
+    for (const e of pinned) html += renderJournalEntryHtml(e);
+    html += '</div>';
+  }
+  for (const date of dates) {
+    html += `<div class="journal-date-group"><div class="journal-date-label">${esc(journalFormatDate(date))}</div>`;
+    for (const e of groups[date]) html += renderJournalEntryHtml(e);
+    html += '</div>';
+  }
+  if (undated.length) {
+    html += '<div class="journal-date-group"><div class="journal-date-label">Other</div>';
+    for (const e of undated) html += renderJournalEntryHtml(e);
+    html += '</div>';
+  }
+  el.innerHTML = html || '<div style="padding:16px;color:var(--text-muted);font-size:13px;">No entries found</div>';
+}
+
+window.loadJournalEntry = async function(key) {
+  journalActiveKey = key;
+  renderJournalTimeline();
+  const entry = journalEntries.find(e => journalEntryKey(e) === key);
+  if (!entry) return;
+
+  const viewer = document.getElementById('journalViewer');
+  const badgeStyle = journalAgentStyle(entry.agent);
+  const title = journalEntryTitle(entry);
+  const dateLabel = entry.date ? journalFormatDate(entry.date) : '';
+
+  viewer.innerHTML = `
+    <div class="journal-viewer-header">
+      <span class="journal-agent-badge" style="${badgeStyle};padding:3px 9px;font-size:11px;">${esc(entry.agentName)}</span>
+      <div class="journal-viewer-title">${esc(title)}</div>
+      ${dateLabel ? `<span style="font-size:12px;color:var(--text-muted);flex-shrink:0;">${esc(dateLabel)}</span>` : ''}
+    </div>
+    <div class="journal-viewer-body md-content" id="journalViewerBody">
+      <div style="color:var(--text-muted);">Loading…</div>
+    </div>`;
+
+  try {
+    const res = await authFetch(API_BASE + '/api/journal-file?agent=' + encodeURIComponent(entry.agent) + '&file=' + encodeURIComponent(entry.file));
     const content = await res.text();
-    let html = content
-      .replace(/</g, '&lt;').replace(/>/g, '&gt;')
-      .replace(/^### (.+)$/gm, '<div style="font-size:16px;font-weight:700;color:var(--accent);margin:16px 0 8px;">$1</div>')
-      .replace(/^## (.+)$/gm, '<div style="font-size:18px;font-weight:700;color:var(--accent);margin:20px 0 12px;">$1</div>')
-      .replace(/^# (.+)$/gm, '<div style="font-size:20px;font-weight:700;color:var(--accent);margin:24px 0 16px;">$1</div>')
-      .replace(/\*\*(.+?)\*\*/g, '<strong style="color:var(--text-primary);font-weight:700;">$1</strong>')
-      .replace(/`([^`]+)`/g, '<code style="background:var(--bg-tertiary);padding:2px 6px;border-radius:4px;font-size:11px;">$1</code>');
-    contentEl.innerHTML = html;
-  } catch (e) {
-    document.getElementById('memoryFileContent').innerHTML = '<div style="color:var(--red);">Failed to load file</div>';
+    const bodyEl = document.getElementById('journalViewerBody');
+    if (!bodyEl) return;
+    if (typeof marked !== 'undefined') {
+      try { bodyEl.innerHTML = marked.parse(content); return; } catch {}
+    }
+    bodyEl.innerHTML = '<pre style="white-space:pre-wrap;font-size:13px;font-family:\'JetBrains Mono\',monospace;color:var(--text-secondary);">' + esc(content) + '</pre>';
+  } catch {
+    const bodyEl = document.getElementById('journalViewerBody');
+    if (bodyEl) bodyEl.innerHTML = '<div style="color:var(--red);">Failed to load entry</div>';
   }
 };
+
+// Legacy stubs so old overview panel references don't break
+async function fetchMemoryFiles() { return fetchJournalEntries(); }
 
 // Files page
 let keyFiles = [];
