@@ -83,6 +83,21 @@ async function fetchGithubIssues() {
   return allIssues;
 }
 
+function readAgentsList() {
+  const configPath = path.join(OPENCLAW_DIR, 'openclaw.json');
+  try {
+    const data = JSON.parse(fs.readFileSync(configPath, 'utf8'));
+    const list = (data.agents && data.agents.list) || [];
+    return list.filter(a => a.name && a.workspace).map(a => ({ id: a.id || '', name: a.name, workspace: a.workspace }));
+  } catch { return []; }
+}
+
+function getAgentWorkspace(agentName) {
+  const agents = readAgentsList();
+  const agent = agents.find(a => a.name === agentName);
+  return agent ? agent.workspace : null;
+}
+
 const PORT = parseInt(process.env.DASHBOARD_PORT || '7001'); // 7000 conflicts with macOS AirPlay
 const OPENCLAW_DIR = process.env.OPENCLAW_DIR || path.join(os.homedir(), '.openclaw');
 const WORKSPACE_DIR = process.env.WORKSPACE_DIR || process.env.OPENCLAW_WORKSPACE || process.cwd();
@@ -1716,10 +1731,12 @@ function getJournalFilePath(agentId, filePath) {
   return null;
 }
 
-function getKeyFiles() {
+function getKeyFiles(wsDir) {
+  const workspace = wsDir || WORKSPACE_DIR;
+  const wsSkillsDir = path.join(workspace, 'skills');
   const files = [];
   for (const fname of workspaceFilenames) {
-    const fpath = path.join(WORKSPACE_DIR, fname);
+    const fpath = path.join(workspace, fname);
     try {
       if (fs.existsSync(fpath)) {
         const stat = fs.statSync(fpath);
@@ -1728,10 +1745,10 @@ function getKeyFiles() {
     } catch {}
   }
   try {
-    if (fs.existsSync(skillsDir)) {
-      const entries = fs.readdirSync(skillsDir).sort();
+    if (fs.existsSync(wsSkillsDir)) {
+      const entries = fs.readdirSync(wsSkillsDir).sort();
       for (const e of entries) {
-        const entryPath = path.join(skillsDir, e);
+        const entryPath = path.join(wsSkillsDir, e);
         try {
           const stat = fs.statSync(entryPath);
           if (stat.isDirectory()) {
@@ -1758,16 +1775,18 @@ function getKeyFiles() {
   return files;
 }
 
-function buildKeyFilesAllowed() {
+function buildKeyFilesAllowed(wsDir) {
+  const workspace = wsDir || WORKSPACE_DIR;
+  const wsSkillsDir = path.join(workspace, 'skills');
   const map = {};
   for (const fname of workspaceFilenames) {
-    const fpath = path.join(WORKSPACE_DIR, fname);
+    const fpath = path.join(workspace, fname);
     if (fs.existsSync(fpath)) map[fname] = fpath;
   }
   try {
-    if (fs.existsSync(skillsDir)) {
-      for (const e of fs.readdirSync(skillsDir).sort()) {
-        const ep = path.join(skillsDir, e);
+    if (fs.existsSync(wsSkillsDir)) {
+      for (const e of fs.readdirSync(wsSkillsDir).sort()) {
+        const ep = path.join(wsSkillsDir, e);
         const stat = fs.statSync(ep);
         if (stat.isDirectory()) {
           const sm = path.join(ep, 'SKILL.md');
@@ -3030,16 +3049,30 @@ const server = http.createServer((req, res) => {
       }
       return;
     }
-    if (req.url === '/api/key-files') {
+    if (req.url === '/api/agents-list') {
+      const agents = readAgentsList().filter(a => {
+        try { return fs.statSync(a.workspace).isDirectory(); } catch { return false; }
+      });
+      const defaultAgent = agents.find(a => a.id === AGENT_ID) || agents[0];
       res.writeHead(200, { 'Content-Type': 'application/json' });
-      res.end(JSON.stringify(getKeyFiles()));
+      res.end(JSON.stringify({ agents, defaultAgent: defaultAgent ? defaultAgent.name : '' }));
+      return;
+    }
+    if (req.url.startsWith('/api/key-files')) {
+      const params = new URL(req.url, 'http://localhost').searchParams;
+      const agentName = params.get('agent') || '';
+      const wsDir = agentName ? getAgentWorkspace(agentName) : null;
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify(getKeyFiles(wsDir)));
       return;
     }
     if (req.url.startsWith('/api/key-file') && req.method === 'GET') {
       try {
         const params = new URL(req.url, 'http://localhost').searchParams;
         const name = params.get('path') || '';
-        const allowed = buildKeyFilesAllowed();
+        const agentName = params.get('agent') || '';
+        const wsDir = agentName ? getAgentWorkspace(agentName) : null;
+        const allowed = buildKeyFilesAllowed(wsDir);
         if (!allowed[name]) {
           res.writeHead(403, { 'Content-Type': 'text/plain' });
           res.end('Forbidden');
@@ -3074,7 +3107,7 @@ const server = http.createServer((req, res) => {
           return;
         }
         try {
-          const { path: name, content } = JSON.parse(body);
+          const { path: name, content, agent: agentName } = JSON.parse(body);
           if (typeof name !== 'string' || typeof content !== 'string') {
             res.writeHead(400, { 'Content-Type': 'application/json' });
             res.end(JSON.stringify({ error: 'Invalid request body' }));
@@ -3085,14 +3118,15 @@ const server = http.createServer((req, res) => {
             res.end(JSON.stringify({ error: 'File is read-only' }));
             return;
           }
-          const allowed = buildKeyFilesAllowed();
+          const wsDir = agentName ? getAgentWorkspace(agentName) : null;
+          const allowed = buildKeyFilesAllowed(wsDir);
           if (!allowed[name]) {
             res.writeHead(403, { 'Content-Type': 'application/json' });
             res.end(JSON.stringify({ error: 'Forbidden' }));
             return;
           }
           const fpath = allowed[name];
-          auditLog('file_edit', ip, { file: name });
+          auditLog('file_edit', ip, { file: name, agent: agentName || undefined });
           try {
             if (fs.existsSync(fpath)) {
               fs.copyFileSync(fpath, fpath + '.bak');
