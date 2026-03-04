@@ -3177,8 +3177,16 @@ body {
 
     <div class="page" id="files">
       <div class="page-header">
-        <h1 class="page-title">Files</h1>
-        <p class="page-subtitle">Key workspace and config files</p>
+        <div style="display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:12px;">
+          <div>
+            <h1 class="page-title" style="margin-bottom:4px;">Files</h1>
+            <p class="page-subtitle" style="margin-bottom:0;">Key workspace and config files</p>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:4px;min-width:200px;">
+            <select id="agentSelector" onchange="window.onAgentSelectorChange()" style="background:var(--bg-secondary);color:var(--text-primary);border:1px solid var(--border);border-radius:6px;padding:6px 10px;font-size:13px;cursor:pointer;"></select>
+            <div id="agentWorkspacePath" style="font-size:11px;color:var(--text-muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:320px;"></div>
+          </div>
+        </div>
       </div>
 
       <div class="grid grid-2 mb-24">
@@ -4092,8 +4100,8 @@ function showApp() {
   fetchNewData();
   fetchHealthHistory();
   fetchMemoryFiles();
-  fetchKeyFiles();
-  
+  initAgentSelector().then(() => fetchKeyFiles());
+
   if (localStorage.getItem('usageAutoRefresh') === '1') {
     const cb = document.getElementById('usageAutoRefresh');
     if (cb) { cb.checked = true; toggleUsageAutoRefresh(true, true); }
@@ -6343,10 +6351,51 @@ let keyFiles = [];
 let currentKeyFile = null;
 let keyFileEditing = false;
 let _currentKeyFileRaw = '';
+let _agentsList = [];
+let _selectedAgent = '';
+
+async function initAgentSelector() {
+  try {
+    const res = await authFetch(API_BASE + '/api/agents-list');
+    const data = await res.json();
+    _agentsList = data.agents || [];
+    const sel = document.getElementById('agentSelector');
+    if (!sel) return;
+    sel.innerHTML = _agentsList.map(a =>
+      `<option value="${a.name.replace(/"/g, '&quot;')}">${a.name}</option>`
+    ).join('');
+    const defaultName = data.defaultAgent || (_agentsList[0] ? _agentsList[0].name : '');
+    if (defaultName) {
+      sel.value = defaultName;
+      _selectedAgent = defaultName;
+      updateAgentWorkspaceLabel();
+    }
+  } catch {}
+}
+
+function updateAgentWorkspaceLabel() {
+  const pathEl = document.getElementById('agentWorkspacePath');
+  if (!pathEl) return;
+  const agent = _agentsList.find(a => a.name === _selectedAgent);
+  pathEl.textContent = agent ? agent.workspace : '';
+}
+
+window.onAgentSelectorChange = function() {
+  const sel = document.getElementById('agentSelector');
+  if (!sel) return;
+  _selectedAgent = sel.value;
+  updateAgentWorkspaceLabel();
+  currentKeyFile = null;
+  document.getElementById('keyFileTitle').textContent = 'Select a file';
+  document.getElementById('keyFileContent').innerHTML = '';
+  document.getElementById('keyFileEditBtn').style.display = 'none';
+  window.fetchKeyFiles();
+};
 
 window.fetchKeyFiles = async function fetchKeyFiles() {
   try {
-    const res = await authFetch(API_BASE + '/api/key-files');
+    const url = API_BASE + '/api/key-files' + (_selectedAgent ? '?agent=' + encodeURIComponent(_selectedAgent) : '');
+    const res = await authFetch(url);
     keyFiles = await res.json();
     renderKeyFilesList();
   } catch {}
@@ -6393,7 +6442,8 @@ window.loadKeyFile = async function(name) {
   renderKeyFilesList();
 
   try {
-    const res = await authFetch(API_BASE + '/api/key-file?path=' + encodeURIComponent(name));
+    const agentParam = _selectedAgent ? '&agent=' + encodeURIComponent(_selectedAgent) : '';
+    const res = await authFetch(API_BASE + '/api/key-file?path=' + encodeURIComponent(name) + agentParam);
     if (!res.ok) { contentEl.innerHTML = '<div style="color:var(--red);">Failed to load: ' + res.status + '</div>'; return; }
     const content = await res.text();
     _currentKeyFileRaw = content;
@@ -6458,10 +6508,12 @@ window.saveKeyFile = async function() {
   saveBtn.disabled = true;
 
   try {
+    const saveBody = { path: currentKeyFile, content };
+    if (_selectedAgent) saveBody.agent = _selectedAgent;
     const res = await authFetch(API_BASE + '/api/key-file', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ path: currentKeyFile, content })
+      body: JSON.stringify(saveBody)
     });
     const data = await res.json();
     if (!res.ok || !data.success) throw new Error(data.error || 'Save failed');
