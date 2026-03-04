@@ -2256,6 +2256,281 @@ body {
   padding: 16px 0;
   text-align: center;
 }
+
+/* ── Activity Timeline page ───────────────────────────────────── */
+.tl-filter-bar {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: 24px;
+}
+.tl-filter-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.tl-filter-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  min-width: 48px;
+}
+.tl-date-btn {
+  padding: 5px 12px;
+  border-radius: 20px;
+  border: 1px solid var(--border);
+  background: var(--bg-card);
+  color: var(--text-secondary);
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.tl-date-btn:hover { border-color: var(--accent); color: var(--text-primary); }
+.tl-date-btn.active { background: var(--accent); border-color: var(--accent); color: #fff; }
+.tl-chip {
+  padding: 4px 12px;
+  border-radius: 20px;
+  border: 1px solid var(--border);
+  background: var(--bg-card);
+  color: var(--text-secondary);
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+.tl-chip:hover { border-color: var(--accent); color: var(--text-primary); }
+.tl-chip.active { background: rgba(99,102,241,0.15); border-color: var(--accent); color: var(--text-primary); }
+.tl-chip[data-type="session"].active { background: rgba(59,130,246,0.15); border-color: var(--blue); color: var(--blue); }
+.tl-chip[data-type="git"].active { background: rgba(16,185,129,0.15); border-color: var(--green); color: var(--green); }
+.tl-chip[data-type="cron"].active { background: rgba(245,158,11,0.15); border-color: var(--yellow); color: var(--yellow); }
+.tl-chip[data-type="task"].active { background: rgba(168,85,247,0.15); border-color: var(--purple); color: var(--purple); }
+.tl-chip[data-type="memory"].active { background: rgba(6,182,212,0.15); border-color: var(--cyan); color: var(--cyan); }
+.tl-refresh-indicator {
+  font-size: 11px;
+  color: var(--text-muted);
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+.tl-refresh-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--green);
+}
+.tl-refresh-dot.spinning {
+  animation: tl-pulse 1s ease-in-out infinite;
+}
+@keyframes tl-pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
+
+.tl-stats-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  padding: 14px 18px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  margin-bottom: 24px;
+  font-size: 13px;
+}
+.tl-stats-total {
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-right: 4px;
+}
+.tl-stats-sep { color: var(--border); }
+.tl-stat-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 9px;
+  border-radius: 12px;
+  font-size: 11px;
+  font-weight: 600;
+}
+.tl-stat-pill-session { background: rgba(59,130,246,0.15); color: var(--blue); }
+.tl-stat-pill-git     { background: rgba(16,185,129,0.15); color: var(--green); }
+.tl-stat-pill-cron    { background: rgba(245,158,11,0.15); color: var(--yellow); }
+.tl-stat-pill-task    { background: rgba(168,85,247,0.15); color: var(--purple); }
+.tl-stat-pill-memory  { background: rgba(6,182,212,0.15); color: var(--cyan); }
+.tl-stats-agent {
+  margin-left: auto;
+  font-size: 12px;
+  color: var(--text-muted);
+}
+.tl-stats-agent strong { color: var(--text-secondary); }
+
+.tl-content { position: relative; }
+.tl-day-group { margin-bottom: 8px; }
+.tl-day-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 24px 0 12px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+.tl-day-header::before,
+.tl-day-header::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--border);
+}
+
+.tl-event {
+  display: flex;
+  gap: 14px;
+  margin-bottom: 8px;
+  position: relative;
+}
+.tl-event-spine {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  flex-shrink: 0;
+  width: 20px;
+}
+.tl-event-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  margin-top: 14px;
+  position: relative;
+  z-index: 1;
+}
+.tl-event-line {
+  width: 2px;
+  flex: 1;
+  background: var(--border);
+  margin-top: 2px;
+}
+.tl-event-dot-session { background: var(--blue); box-shadow: 0 0 6px rgba(59,130,246,0.5); }
+.tl-event-dot-git     { background: var(--green); box-shadow: 0 0 6px rgba(16,185,129,0.5); }
+.tl-event-dot-cron    { background: var(--yellow); box-shadow: 0 0 6px rgba(245,158,11,0.5); }
+.tl-event-dot-task    { background: var(--purple); box-shadow: 0 0 6px rgba(168,85,247,0.5); }
+.tl-event-dot-memory  { background: var(--cyan); box-shadow: 0 0 6px rgba(6,182,212,0.5); }
+
+.tl-event-card {
+  flex: 1;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  overflow: hidden;
+  cursor: pointer;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+.tl-event-card:hover { border-color: var(--accent); box-shadow: 0 2px 12px rgba(99,102,241,0.12); }
+.tl-event-card-session { border-left: 3px solid var(--blue); }
+.tl-event-card-git     { border-left: 3px solid var(--green); }
+.tl-event-card-cron    { border-left: 3px solid var(--yellow); }
+.tl-event-card-task    { border-left: 3px solid var(--purple); }
+.tl-event-card-memory  { border-left: 3px solid var(--cyan); }
+
+.tl-event-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+}
+.tl-type-badge {
+  font-size: 10px;
+  font-weight: 700;
+  padding: 2px 7px;
+  border-radius: 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  flex-shrink: 0;
+}
+.tl-type-badge-session { background: rgba(59,130,246,0.15); color: var(--blue); }
+.tl-type-badge-git     { background: rgba(16,185,129,0.15); color: var(--green); }
+.tl-type-badge-cron    { background: rgba(245,158,11,0.15); color: var(--yellow); }
+.tl-type-badge-task    { background: rgba(168,85,247,0.15); color: var(--purple); }
+.tl-type-badge-memory  { background: rgba(6,182,212,0.15); color: var(--cyan); }
+
+.tl-event-title {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-primary);
+  flex: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.tl-event-agent {
+  font-size: 11px;
+  color: var(--text-muted);
+  background: var(--bg-tertiary);
+  padding: 1px 7px;
+  border-radius: 8px;
+  flex-shrink: 0;
+}
+.tl-event-time {
+  font-size: 11px;
+  color: var(--text-muted);
+  font-family: 'JetBrains Mono', monospace;
+  flex-shrink: 0;
+}
+.tl-event-detail {
+  padding: 0 14px 10px;
+  font-size: 12px;
+  color: var(--text-secondary);
+  display: none;
+  border-top: 1px solid var(--border);
+  margin: 0 0 0 0;
+  padding-top: 8px;
+}
+.tl-event-card.expanded .tl-event-detail { display: block; }
+.tl-event-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 6px;
+}
+.tl-event-meta-item {
+  font-size: 11px;
+  color: var(--text-muted);
+  font-family: 'JetBrains Mono', monospace;
+}
+
+.tl-empty {
+  padding: 64px 32px;
+  text-align: center;
+  color: var(--text-muted);
+  font-size: 14px;
+}
+.tl-loading {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 8px 0;
+}
+.tl-skel {
+  height: 52px;
+  background: var(--bg-card);
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  animation: skel-pulse 1.4s ease-in-out infinite;
+}
+@keyframes skel-pulse { 0%,100%{opacity:1} 50%{opacity:0.5} }
+@media (max-width: 600px) {
+  .tl-event-agent { display: none; }
+  .tl-stats-agent { display: none; }
+}
 </style>
 </head>
 <body>
@@ -2397,6 +2672,10 @@ body {
       <div class="nav-item" data-page="prs">
         <span class="icon">🔀</span>
         <span class="nav-text">Pull Requests</span>
+      </div>
+      <div class="nav-item" data-page="timeline">
+        <span class="icon">🕐</span>
+        <span class="nav-text">Timeline</span>
       </div>
     </nav>
     <div style="padding:16px;border-top:1px solid var(--border);margin-top:auto;">
@@ -3307,6 +3586,59 @@ body {
       </div>
       <div id="prsContent">
         <div style="color:var(--text-muted);font-size:14px;padding:32px;">Loading…</div>
+      </div>
+    </div>
+
+    <!-- Activity Timeline Page -->
+    <div class="page" id="timeline">
+      <div class="page-header">
+        <h1 class="page-title">Activity Timeline</h1>
+        <p class="page-subtitle">Unified audit log of all system events</p>
+      </div>
+
+      <div class="tl-filter-bar">
+        <div class="tl-filter-row">
+          <span class="tl-filter-label">Range</span>
+          <button class="tl-date-btn" data-range="1h">1h</button>
+          <button class="tl-date-btn" data-range="6h">6h</button>
+          <button class="tl-date-btn active" data-range="24h">24h</button>
+          <button class="tl-date-btn" data-range="7d">7d</button>
+          <button class="tl-date-btn" data-range="30d">30d</button>
+          <div class="tl-refresh-indicator" id="tlRefreshIndicator" style="display:none;">
+            <div class="tl-refresh-dot" id="tlRefreshDot"></div>
+            <span id="tlRefreshText">auto-refresh</span>
+          </div>
+        </div>
+        <div class="tl-filter-row">
+          <span class="tl-filter-label">Types</span>
+          <span class="tl-chip active" data-type="session">🤖 Session</span>
+          <span class="tl-chip active" data-type="git">🌿 Git</span>
+          <span class="tl-chip active" data-type="cron">⏰ Cron</span>
+          <span class="tl-chip active" data-type="task">📌 Task</span>
+          <span class="tl-chip active" data-type="memory">🧠 Memory</span>
+        </div>
+        <div class="tl-filter-row" id="tlAgentFilterRow" style="display:none;">
+          <span class="tl-filter-label">Agents</span>
+          <div id="tlAgentChips"></div>
+        </div>
+      </div>
+
+      <div class="tl-stats-bar" id="tlStatsBar" style="display:none;">
+        <span class="tl-stats-total" id="tlStatsTotal">0</span>
+        <span style="color:var(--text-muted);font-size:12px;">events</span>
+        <span class="tl-stats-sep">·</span>
+        <span id="tlStatsPills"></span>
+        <span class="tl-stats-agent" id="tlStatsAgent"></span>
+      </div>
+
+      <div class="tl-content" id="tlContent">
+        <div class="tl-loading">
+          <div class="tl-skel"></div>
+          <div class="tl-skel"></div>
+          <div class="tl-skel"></div>
+          <div class="tl-skel"></div>
+          <div class="tl-skel"></div>
+        </div>
       </div>
     </div>
 
@@ -4419,6 +4751,12 @@ document.querySelectorAll('.nav-item').forEach(item => {
     }
     if (page === 'prs') {
       fetchPRs();
+    }
+    if (page === 'timeline') {
+      fetchTimeline();
+      tlStartAutoRefresh();
+    } else {
+      tlStopAutoRefresh();
     }
   });
 });
@@ -7900,6 +8238,235 @@ async function fetchPRs() {
     content.innerHTML = `<div style="color:var(--red);font-size:14px;padding:32px;">Error: ${esc(String(e.message || e))}</div>`;
   }
 }
+
+// ── Activity Timeline ──────────────────────────────────────────────────────
+
+const TL_TYPE_ICONS = { session: '🤖', git: '🌿', cron: '⏰', task: '📌', memory: '🧠' };
+const TL_RANGE_MS = { '1h': 3600000, '6h': 21600000, '24h': 86400000, '7d': 604800000, '30d': 2592000000 };
+const TL_AUTO_RANGES = new Set(['1h', '6h']);
+
+let tlRange = '24h';
+let tlActiveTypes = new Set(['session', 'git', 'cron', 'task', 'memory']);
+let tlActiveAgents = new Set();
+let tlAllAgents = [];
+let tlRefreshTimer = null;
+let tlData = null;
+
+function tlSetRange(range) {
+  tlRange = range;
+  document.querySelectorAll('.tl-date-btn').forEach(b => b.classList.toggle('active', b.dataset.range === range));
+  const indicator = document.getElementById('tlRefreshIndicator');
+  if (indicator) indicator.style.display = TL_AUTO_RANGES.has(range) ? 'flex' : 'none';
+  tlData = null;
+  fetchTimeline();
+}
+
+function tlToggleType(chip) {
+  const type = chip.dataset.type;
+  if (tlActiveTypes.has(type)) {
+    if (tlActiveTypes.size === 1) return; // keep at least one
+    tlActiveTypes.delete(type);
+    chip.classList.remove('active');
+  } else {
+    tlActiveTypes.add(type);
+    chip.classList.add('active');
+  }
+  if (tlData) renderTimeline(tlData);
+}
+
+function tlToggleAgent(chip) {
+  const agent = chip.dataset.agent;
+  if (tlActiveAgents.has(agent)) {
+    tlActiveAgents.delete(agent);
+    chip.classList.remove('active');
+  } else {
+    tlActiveAgents.add(agent);
+    chip.classList.add('active');
+  }
+  if (tlData) renderTimeline(tlData);
+}
+
+function tlRelTime(ts) {
+  const diff = Date.now() - new Date(ts).getTime();
+  if (diff < 60000) return 'just now';
+  if (diff < 3600000) return Math.floor(diff / 60000) + 'm ago';
+  if (diff < 86400000) return Math.floor(diff / 3600000) + 'h ago';
+  return Math.floor(diff / 86400000) + 'd ago';
+}
+
+function tlAbsTime(ts) {
+  return new Date(ts).toLocaleString();
+}
+
+function tlDayKey(ts) {
+  const d = new Date(ts);
+  return d.toLocaleDateString(undefined, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+}
+
+function tlToggleCard(card) {
+  card.classList.toggle('expanded');
+}
+
+function renderTimeline(data) {
+  const content = document.getElementById('tlContent');
+  if (!content) return;
+
+  // Apply client-side filters
+  let events = data.events.filter(e => {
+    if (!tlActiveTypes.has(e.type)) return false;
+    if (tlActiveAgents.size > 0 && e.agent && !tlActiveAgents.has(e.agent)) return false;
+    return true;
+  });
+
+  // Update stats bar
+  const statsBar = document.getElementById('tlStatsBar');
+  const statsTotal = document.getElementById('tlStatsTotal');
+  const statsPills = document.getElementById('tlStatsPills');
+  const statsAgent = document.getElementById('tlStatsAgent');
+  if (statsBar) {
+    statsBar.style.display = events.length > 0 ? 'flex' : 'none';
+    if (statsTotal) statsTotal.textContent = events.length;
+
+    const counts = {};
+    const agentCounts = {};
+    for (const e of events) {
+      counts[e.type] = (counts[e.type] || 0) + 1;
+      if (e.agent) agentCounts[e.agent] = (agentCounts[e.agent] || 0) + 1;
+    }
+    if (statsPills) {
+      statsPills.innerHTML = Object.entries(counts).map(([type, n]) =>
+        `<span class="tl-stat-pill tl-stat-pill-${type}">${TL_TYPE_ICONS[type]} ${n}</span>`
+      ).join(' ');
+    }
+    if (statsAgent) {
+      const topAgent = Object.entries(agentCounts).sort((a, b) => b[1] - a[1])[0];
+      statsAgent.innerHTML = topAgent ? `Most active: <strong>${esc(topAgent[0])}</strong> (${topAgent[1]})` : '';
+    }
+  }
+
+  if (events.length === 0) {
+    content.innerHTML = '<div class="tl-empty">No events found for this time range and filter.</div>';
+    return;
+  }
+
+  // Group by day
+  const groups = {};
+  const groupOrder = [];
+  for (const e of events) {
+    const day = tlDayKey(e.timestamp);
+    if (!groups[day]) { groups[day] = []; groupOrder.push(day); }
+    groups[day].push(e);
+  }
+
+  let html = '';
+  for (const day of groupOrder) {
+    const dayEvents = groups[day];
+    html += `<div class="tl-day-group"><div class="tl-day-header">${esc(day)}</div>`;
+    for (let i = 0; i < dayEvents.length; i++) {
+      const e = dayEvents[i];
+      const isLast = i === dayEvents.length - 1;
+      const metaItems = [];
+      if (e.meta) {
+        if (e.meta.model) metaItems.push(esc(e.meta.model));
+        if (e.meta.messages) metaItems.push(e.meta.messages + ' msgs');
+        if (e.meta.inputTokens) metaItems.push((e.meta.inputTokens + e.meta.outputTokens).toLocaleString() + ' tok');
+        if (e.meta.hash) metaItems.push(esc(e.meta.hash));
+        if (e.meta.author) metaItems.push(esc(e.meta.author));
+        if (e.meta.status) metaItems.push(esc(e.meta.status));
+        if (e.meta.duration) metaItems.push(e.meta.duration + 'ms');
+        if (e.meta.priority) metaItems.push('priority: ' + esc(e.meta.priority));
+        if (e.meta.size) metaItems.push((e.meta.size / 1024).toFixed(1) + ' KB');
+      }
+      html += `
+        <div class="tl-event">
+          <div class="tl-event-spine">
+            <div class="tl-event-dot tl-event-dot-${e.type}"></div>
+            ${!isLast ? '<div class="tl-event-line"></div>' : ''}
+          </div>
+          <div class="tl-event-card tl-event-card-${e.type}" onclick="tlToggleCard(this)">
+            <div class="tl-event-header">
+              <span class="tl-type-badge tl-type-badge-${e.type}">${e.type}</span>
+              <span class="tl-event-title" title="${esc(e.title)}">${esc(e.title)}</span>
+              ${e.agent ? `<span class="tl-event-agent">${esc(e.agent)}</span>` : ''}
+              <span class="tl-event-time" title="${tlAbsTime(e.timestamp)}">${tlRelTime(e.timestamp)}</span>
+            </div>
+            ${e.detail || metaItems.length ? `
+            <div class="tl-event-detail">
+              ${e.detail ? `<div>${esc(e.detail)}</div>` : ''}
+              ${metaItems.length ? `<div class="tl-event-meta">${metaItems.map(m => `<span class="tl-event-meta-item">${m}</span>`).join('')}</div>` : ''}
+            </div>` : ''}
+          </div>
+        </div>`;
+    }
+    html += '</div>';
+  }
+
+  content.innerHTML = html;
+
+  // Update agent filter row
+  const agents = [...new Set(data.events.map(e => e.agent).filter(Boolean))].sort();
+  if (JSON.stringify(agents) !== JSON.stringify(tlAllAgents)) {
+    tlAllAgents = agents;
+    const agentRow = document.getElementById('tlAgentFilterRow');
+    const agentChips = document.getElementById('tlAgentChips');
+    if (agentRow && agentChips && agents.length > 0) {
+      agentChips.innerHTML = agents.map(a =>
+        `<span class="tl-chip" data-agent="${esc(a)}" onclick="tlToggleAgent(this)">${esc(a)}</span>`
+      ).join('');
+      agentRow.style.display = 'flex';
+    }
+  }
+}
+
+async function fetchTimeline() {
+  const content = document.getElementById('tlContent');
+  if (!content) return;
+
+  content.innerHTML = '<div class="tl-loading">' + Array(6).fill('<div class="tl-skel"></div>').join('') + '</div>';
+  document.getElementById('tlStatsBar').style.display = 'none';
+
+  const dot = document.getElementById('tlRefreshDot');
+  if (dot) dot.classList.add('spinning');
+
+  try {
+    const now = Date.now();
+    const since = new Date(now - (TL_RANGE_MS[tlRange] || 86400000)).toISOString();
+    const until = new Date(now).toISOString();
+    const r = await authFetch(API_BASE + '/api/activity-timeline?since=' + encodeURIComponent(since) + '&until=' + encodeURIComponent(until) + '&limit=500');
+    tlData = await r.json();
+    renderTimeline(tlData);
+  } catch (e) {
+    if (content) content.innerHTML = `<div class="tl-empty" style="color:var(--red);">Error loading timeline: ${esc(String(e.message || e))}</div>`;
+  } finally {
+    if (dot) dot.classList.remove('spinning');
+  }
+}
+
+function tlStartAutoRefresh() {
+  tlStopAutoRefresh();
+  if (TL_AUTO_RANGES.has(tlRange)) {
+    tlRefreshTimer = setInterval(() => {
+      if (document.getElementById('timeline')?.classList.contains('active')) {
+        tlData = null;
+        fetchTimeline();
+      }
+    }, 30000);
+  }
+}
+
+function tlStopAutoRefresh() {
+  if (tlRefreshTimer) { clearInterval(tlRefreshTimer); tlRefreshTimer = null; }
+}
+
+// Wire up date buttons
+document.querySelectorAll('.tl-date-btn').forEach(btn => {
+  btn.addEventListener('click', () => tlSetRange(btn.dataset.range));
+});
+
+// Wire up type chips
+document.querySelectorAll('.tl-chip[data-type]').forEach(chip => {
+  chip.addEventListener('click', () => tlToggleType(chip));
+});
 </script>
 </body>
 </html>

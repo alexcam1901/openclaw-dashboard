@@ -1842,6 +1842,222 @@ setInterval(() => {
   }
 }, 60 * 1000);
 
+// ── Activity Timeline ─────────────────────────────────────────────────────────
+let _tlCache = null;
+let _tlCacheTime = 0;
+const TL_CACHE_TTL = 30000;
+
+function collectTimelineEvents() {
+  const now = Date.now();
+  if (_tlCache && (now - _tlCacheTime) < TL_CACHE_TTL) return _tlCache;
+
+  const events = [];
+  const scanSince = now - 30 * 24 * 3600 * 1000; // cache up to 30 days
+
+  // 1. Session events
+  const agentsBaseDir = path.join(OPENCLAW_DIR, 'agents');
+  try {
+    const agentNames = fs.readdirSync(agentsBaseDir).filter(a => {
+      try { return fs.statSync(path.join(agentsBaseDir, a)).isDirectory(); } catch { return false; }
+    });
+    for (const agent of agentNames) {
+      const sessionsDir = path.join(agentsBaseDir, agent, 'sessions');
+      try {
+        const files = fs.readdirSync(sessionsDir).filter(f => isSessionFile(f));
+        for (const file of files) {
+          const filePath = path.join(sessionsDir, file);
+          try {
+            const stat = fs.statSync(filePath);
+            if (stat.mtimeMs < scanSince) continue;
+            const content = fs.readFileSync(filePath, 'utf8');
+            const lines = content.split('\n').filter(l => l.trim());
+            if (lines.length === 0) continue;
+            let firstTs = null, model = null, inputTokens = 0, outputTokens = 0;
+            try {
+              const first = JSON.parse(lines[0]);
+              if (first.timestamp) firstTs = first.timestamp;
+              else if (first.message && first.message.created_at) firstTs = new Date(first.message.created_at * 1000).toISOString();
+            } catch {}
+            for (const line of lines.slice(-20)) {
+              try {
+                const d = JSON.parse(line);
+                if (d.type === 'message' && d.message && d.message.usage && d.message.role === 'assistant') {
+                  if (!model && d.message.model) model = d.message.model;
+                  const u = d.message.usage;
+                  inputTokens += (u.input || 0);
+                  outputTokens += (u.output || 0);
+                }
+              } catch {}
+            }
+            const ts = firstTs || new Date(stat.birthtimeMs).toISOString();
+            if (new Date(ts).getTime() < scanSince) continue;
+            const sessionId = file.replace(/\.jsonl.*$/, '');
+            events.push({
+              id: 'session-' + agent + '-' + sessionId,
+              type: 'session',
+              timestamp: ts,
+              agent: agent,
+              title: 'Session ' + sessionId.substring(0, 8),
+              detail: lines.length + ' messages',
+              meta: {
+                sessionId,
+                model: model || 'unknown',
+                messages: lines.length,
+                inputTokens,
+                outputTokens,
+                endedAt: new Date(stat.mtimeMs).toISOString()
+              }
+            });
+          } catch {}
+        }
+      } catch {}
+    }
+  } catch {}
+
+  // 2. Git commits
+  const config = readProjectsConfig();
+  const { execSync } = require('child_process');
+  const gitSinceDate = new Date(scanSince).toISOString();
+  for (const [name, proj] of Object.entries(config.projects || {})) {
+    const repoPath = proj.repo || '';
+    if (!repoPath) continue;
+    try {
+      if (!fs.existsSync(repoPath)) continue;
+      const gitLog = execSync(
+        'git -C "' + repoPath + '" log --all --format=\'{"hash":"%h","author":"%an","date":"%aI","subject":"%s"}\' --since="' + gitSinceDate + '"',
+        { timeout: 5000, encoding: 'utf8', stdio: ['pipe', 'pipe', 'ignore'] }
+      );
+      for (const line of gitLog.split('\n').filter(l => l.trim())) {
+        try {
+          const commit = JSON.parse(line.trim());
+          events.push({
+            id: 'git-' + name + '-' + commit.hash,
+            type: 'git',
+            timestamp: commit.date,
+            agent: null,
+            title: commit.subject,
+            detail: 'by ' + commit.author + ' in ' + name,
+            meta: { hash: commit.hash, author: commit.author, repo: name }
+          });
+        } catch {}
+      }
+    } catch {}
+  }
+
+  // 3. Cron events
+  try {
+    if (fs.existsSync(cronFile)) {
+      let cronJobs;
+      try { cronJobs = JSON.parse(fs.readFileSync(cronFile, 'utf8')); } catch {}
+      if (cronJobs) {
+        const jobsMap = cronJobs.jobs || cronJobs;
+        for (const [jobName, job] of Object.entries(jobsMap)) {
+          if (typeof job !== 'object' || !job) continue;
+          if (!job.lastRunAt) continue;
+          const runMs = new Date(job.lastRunAt).getTime();
+          if (runMs < scanSince) continue;
+          events.push({
+            id: 'cron-' + jobName + '-lastrun',
+            type: 'cron',
+            timestamp: job.lastRunAt,
+            agent: null,
+            title: 'Cron: ' + jobName,
+            detail: job.lastStatus ? 'Status: ' + job.lastStatus : '',
+            meta: { job: jobName, status: job.lastStatus || 'run', schedule: job.schedule }
+          });
+        }
+      }
+    }
+  } catch {}
+
+  const cronRunsDir = path.join(OPENCLAW_DIR, 'cron', 'runs');
+  try {
+    if (fs.existsSync(cronRunsDir)) {
+      for (const file of fs.readdirSync(cronRunsDir)) {
+        if (!file.endsWith('.json')) continue;
+        const runPath = path.join(cronRunsDir, file);
+        try {
+          const stat = fs.statSync(runPath);
+          if (stat.mtimeMs < scanSince) continue;
+          let runData;
+          try { runData = JSON.parse(fs.readFileSync(runPath, 'utf8')); } catch { continue; }
+          const ts = runData.startedAt || runData.timestamp || new Date(stat.mtimeMs).toISOString();
+          if (new Date(ts).getTime() < scanSince) continue;
+          events.push({
+            id: 'cron-run-' + file,
+            type: 'cron',
+            timestamp: ts,
+            agent: null,
+            title: 'Cron: ' + (runData.job || file.replace('.json', '')),
+            detail: runData.status ? 'Status: ' + runData.status : '',
+            meta: { job: runData.job, status: runData.status, duration: runData.duration }
+          });
+        } catch {}
+      }
+    }
+  } catch {}
+
+  // 4. Task events
+  const activeTasksFile = path.join(OPENCLAW_DIR, 'active-tasks.json');
+  try {
+    if (fs.existsSync(activeTasksFile)) {
+      const data = JSON.parse(fs.readFileSync(activeTasksFile, 'utf8'));
+      for (const task of (data.tasks || [])) {
+        const ts = task.updatedAt || task.createdAt || task.startedAt;
+        if (!ts) continue;
+        const taskMs = new Date(ts).getTime();
+        if (taskMs < scanSince) continue;
+        events.push({
+          id: 'task-' + (task.id || task.sessionId || taskMs),
+          type: 'task',
+          timestamp: ts,
+          agent: task.agent || null,
+          title: task.title || task.description || task.task || 'Task update',
+          detail: 'Status: ' + (task.status || 'unknown') + (task.project ? ' · ' + task.project : ''),
+          meta: { status: task.status, project: task.project, priority: task.priority }
+        });
+      }
+    }
+  } catch {}
+
+  // 5. Memory file changes
+  const memDirsToScan = [];
+  if (fs.existsSync(memoryDir)) memDirsToScan.push({ dir: memoryDir, agent: AGENT_ID });
+  try {
+    for (const agent of fs.readdirSync(agentsBaseDir)) {
+      const agentMemDir = path.join(agentsBaseDir, agent, 'workspace', 'memory');
+      try {
+        if (fs.statSync(agentMemDir).isDirectory()) memDirsToScan.push({ dir: agentMemDir, agent });
+      } catch {}
+    }
+  } catch {}
+  for (const { dir, agent } of memDirsToScan) {
+    try {
+      for (const file of fs.readdirSync(dir).filter(f => f.endsWith('.md'))) {
+        try {
+          const stat = fs.statSync(path.join(dir, file));
+          if (stat.mtimeMs < scanSince) continue;
+          events.push({
+            id: 'memory-' + agent + '-' + file + '-' + stat.mtimeMs,
+            type: 'memory',
+            timestamp: new Date(stat.mtimeMs).toISOString(),
+            agent: agent,
+            title: 'Memory: ' + file,
+            detail: (stat.size / 1024).toFixed(1) + ' KB',
+            meta: { file, size: stat.size }
+          });
+        } catch {}
+      }
+    } catch {}
+  }
+
+  events.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+  _tlCache = events;
+  _tlCacheTime = now;
+  return events;
+}
+// ── End Activity Timeline ─────────────────────────────────────────────────────
+
 const server = http.createServer((req, res) => {
   if (!httpsEnforcement(req, res)) return;
   setSecurityHeaders(res);
@@ -3256,6 +3472,38 @@ const server = http.createServer((req, res) => {
         res.end(JSON.stringify({ path: resolved, content }));
       } catch (e) {
         res.writeHead(e.code === 'ENOENT' ? 404 : 500, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: e.message }));
+      }
+      return;
+    }
+
+    // Activity Timeline API
+    if ((req.url === '/api/activity-timeline' || req.url.startsWith('/api/activity-timeline?')) && req.method === 'GET') {
+      try {
+        const params = new URL(req.url, 'http://localhost').searchParams;
+        const now = Date.now();
+        const sinceMs = params.get('since') ? new Date(params.get('since')).getTime() : now - 86400000;
+        const untilMs = params.get('until') ? new Date(params.get('until')).getTime() : now;
+        const agentsFilter = params.get('agents') ? params.get('agents').split(',').map(a => a.trim()).filter(Boolean) : null;
+        const typesFilter = params.get('types') ? params.get('types').split(',').map(t => t.trim()).filter(Boolean) : null;
+        const limit = Math.min(parseInt(params.get('limit') || '200', 10) || 200, 1000);
+
+        let events = collectTimelineEvents();
+
+        events = events.filter(e => {
+          const eMs = new Date(e.timestamp).getTime();
+          if (eMs < sinceMs || eMs > untilMs) return false;
+          if (agentsFilter && agentsFilter.length && e.agent && !agentsFilter.includes(e.agent)) return false;
+          if (typesFilter && typesFilter.length && !typesFilter.includes(e.type)) return false;
+          return true;
+        });
+
+        const total = events.length;
+        const truncated = total > limit;
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ events: events.slice(0, limit), total, truncated }));
+      } catch (e) {
+        res.writeHead(500, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify({ error: e.message }));
       }
       return;
