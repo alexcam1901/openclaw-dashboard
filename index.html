@@ -1477,6 +1477,25 @@ body {
 .project-modal-tab:hover { color: var(--text-primary); }
 .project-modal-tab.active { color: var(--accent); border-bottom-color: var(--accent); }
 
+.usage-tabs {
+  display: flex;
+  gap: 0;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 24px;
+}
+.usage-tab {
+  padding: 10px 20px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  color: var(--text-secondary);
+  border-bottom: 2px solid transparent;
+  transition: all 0.2s;
+  margin-bottom: -1px;
+}
+.usage-tab:hover { color: var(--text-primary); }
+.usage-tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+
 .project-modal-body {
   flex: 1;
   overflow-y: auto;
@@ -2546,17 +2565,9 @@ body {
         <span class="icon">📊</span>
         <span class="nav-text">Overview</span>
       </div>
-      <div class="nav-item" data-page="sessions">
-        <span class="icon">🤖</span>
-        <span class="nav-text">Sessions</span>
-      </div>
-      <div class="nav-item" data-page="costs">
-        <span class="icon">💰</span>
-        <span class="nav-text">Costs</span>
-      </div>
-      <div class="nav-item" data-page="limits">
-        <span class="icon">📈</span>
-        <span class="nav-text">Limits</span>
+      <div class="nav-item" data-page="usage">
+        <span class="icon">📊</span>
+        <span class="nav-text">Usage</span>
       </div>
       <div class="nav-item" data-page="memory">
         <span class="icon">🧠</span>
@@ -2810,7 +2821,7 @@ body {
         <div class="card">
           <h3 class="card-title">Recent Activity</h3>
           <div class="activity-feed" id="recentActivity" style="max-height:400px;overflow-y:auto;"></div>
-          <a href="#" class="view-all-link" data-page="sessions">View All Sessions →</a>
+          <a href="#" class="view-all-link" data-page="usage" data-tab="sessions">View All Sessions →</a>
         </div>
         <div>
           <div class="card mb-24">
@@ -2841,276 +2852,276 @@ body {
       </div>
     </div>
 
-    <div class="page" id="sessions">
+    <div class="page" id="usage">
       <div class="page-header">
-        <h1 class="page-title">Sessions</h1>
-        <p class="page-subtitle">All agent sessions and their activity</p>
+        <h1 class="page-title">Usage</h1>
+        <p class="page-subtitle">Sessions, costs, and rate limits</p>
       </div>
 
-      <div class="card mb-24" id="sessionsStatsBar" style="padding:16px 24px;">
-        <div style="display:flex;gap:32px;flex-wrap:wrap;align-items:center;">
-          <div style="display:flex;align-items:center;gap:8px;">
-            <span style="font-size:12px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.05em;">Sessions</span>
-            <span class="mono" style="font-size:20px;font-weight:700;" id="statsSessionCount">0</span>
-          </div>
-          <div style="display:flex;align-items:center;gap:8px;">
-            <span style="font-size:12px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.05em;">Tokens</span>
-            <span class="mono" style="font-size:20px;font-weight:700;" id="statsTotalTokens">0</span>
-          </div>
-          <div style="display:flex;align-items:center;gap:8px;">
-            <span style="font-size:12px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.05em;">Cost</span>
-            <span class="mono" style="font-size:20px;font-weight:700;color:var(--accent);" id="statsTotalCost">$0.00</span>
-          </div>
-        </div>
+      <div class="usage-tabs">
+        <div class="usage-tab active" data-tab="overview" onclick="switchUsageTab('overview')">Overview</div>
+        <div class="usage-tab" data-tab="sessions" onclick="switchUsageTab('sessions')">Sessions</div>
+        <div class="usage-tab" data-tab="breakdown" onclick="switchUsageTab('breakdown')">Breakdown</div>
       </div>
 
-      <div class="card mb-24" style="padding:16px 24px;">
-        <h3 class="card-title" style="margin-bottom:12px;">Session Timeline</h3>
-        <div id="timelineCanvas" style="min-height:60px;"></div>
-      </div>
-
-
-      <div style="display:flex;flex-wrap:wrap;gap:12px;align-items:center;margin-bottom:20px;padding:16px 20px;background:var(--bg-card);border:1px solid var(--border);border-radius:12px;">
-        <div class="filter-chips" id="statusFilters">
-          <div class="chip active" data-filter="all">All</div>
-          <div class="chip" data-filter="running">Active</div>
-          <div class="chip" data-filter="complete">Idle</div>
-          <div class="chip" data-filter="subagent">Subs</div>
-          <div class="chip" data-filter="cron">Cron</div>
-          <div class="chip" data-filter="group">Groups</div>
-        </div>
-        <div style="width:1px;height:24px;background:var(--border);"></div>
-        <div class="filter-chips" id="modelFilters">
-          <div class="chip active" data-model="all">All Models</div>
-        </div>
-        <div style="width:1px;height:24px;background:var(--border);"></div>
-        <div class="filter-chips" id="dateFilters">
-          <div class="chip" data-range="today">Today</div>
-          <div class="chip active" data-range="7d">7d</div>
-          <div class="chip" data-range="30d">30d</div>
-          <div class="chip" data-range="all">All</div>
-        </div>
-        <input type="text" class="search-box" placeholder="🔍 Search..." id="sessionSearch" style="min-width:150px;max-width:250px;">
-      </div>
-
-      <div class="sessions-table">
-        <div class="table-header" style="grid-template-columns: 24px 32px 180px 70px 140px 90px 80px 1fr 90px;">
-          <div></div>
-          <div></div>
-          <div class="sortable" data-sort="label">Name</div>
-          <div class="sortable" data-sort="type">Type</div>
-          <div class="sortable" data-sort="model">Model</div>
-          <div class="sortable" data-sort="tokens">Tokens</div>
-          <div class="sortable" data-sort="cost">Cost</div>
-          <div>Last Message</div>
-          <div class="sortable" data-sort="updated">Updated</div>
-        </div>
-        <div id="sessionsTableBody"></div>
-      </div>
-    </div>
-
-    <div class="page" id="limits">
-      <div class="page-header">
-        <h1 class="page-title">Rate Limits</h1>
-        <p class="page-subtitle">Claude Max 5x · 5-hour rolling usage windows</p>
-      </div>
-
-      <div class="card mb-24">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
-          <h3 class="card-title" style="margin:0;">Claude Code Usage (Anthropic)</h3>
-          <div style="display:flex;align-items:center;gap:12px;">
-            <span style="font-size:11px;color:var(--text-muted);" id="claudeUsageScrapedAt">Not scraped yet</span>
-            <button onclick="scrapeClaudeUsage()" style="padding:4px 12px;border-radius:6px;border:1px solid var(--border);background:var(--bg-secondary);color:var(--text-primary);cursor:pointer;font-size:12px;" id="scrapeBtn">⟳ Refresh</button>
-          </div>
-        </div>
-        <div style="display:flex;flex-direction:column;gap:20px;" id="claudeUsageBars">
-          <div>
-            <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:6px;">
-              <span style="font-weight:600;font-size:14px;">Session</span>
-              <span class="mono" style="font-size:12px;color:var(--text-secondary);" id="cuSessionLabel">--</span>
-            </div>
-            <div style="height:24px;background:var(--bg-primary);border-radius:12px;overflow:hidden;position:relative;">
-              <div id="cuSessionBar" style="height:100%;border-radius:12px;transition:width 0.6s;width:0%;background:linear-gradient(90deg,#10b981,#10b981);"></div>
-              <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,0.5);" id="cuSessionPct">--</div>
-            </div>
-            <div style="font-size:11px;color:var(--text-muted);margin-top:4px;" id="cuSessionReset"></div>
-          </div>
-          <div>
-            <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:6px;">
-              <span style="font-weight:600;font-size:14px;">Weekly (All Models)</span>
-              <span class="mono" style="font-size:12px;color:var(--text-secondary);" id="cuWeeklyLabel">--</span>
-            </div>
-            <div style="height:24px;background:var(--bg-primary);border-radius:12px;overflow:hidden;position:relative;">
-              <div id="cuWeeklyBar" style="height:100%;border-radius:12px;transition:width 0.6s;width:0%;background:linear-gradient(90deg,#10b981,#10b981);"></div>
-              <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,0.5);" id="cuWeeklyPct">--</div>
-            </div>
-            <div style="font-size:11px;color:var(--text-muted);margin-top:4px;" id="cuWeeklyReset"></div>
-          </div>
-          <div>
-            <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:6px;">
-              <span style="font-weight:600;font-size:14px;">Weekly (Sonnet)</span>
-              <span class="mono" style="font-size:12px;color:var(--text-secondary);" id="cuSonnetLabel">--</span>
-            </div>
-            <div style="height:24px;background:var(--bg-primary);border-radius:12px;overflow:hidden;position:relative;">
-              <div id="cuSonnetBar" style="height:100%;border-radius:12px;transition:width 0.6s;width:0%;background:linear-gradient(90deg,#10b981,#10b981);"></div>
-              <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,0.5);" id="cuSonnetPct">--</div>
-            </div>
-            <div style="font-size:11px;color:var(--text-muted);margin-top:4px;" id="cuSonnetReset"></div>
-          </div>
-        </div>
-      </div>
-
-      <div class="card mb-24">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
-          <h3 class="card-title" style="margin:0;">Gemini Usage (Google)</h3>
-          <div style="display:flex;align-items:center;gap:12px;">
-            <span style="font-size:11px;color:var(--text-muted);" id="geminiUsageScrapedAt">Not scraped yet</span>
-            <button onclick="scrapeGeminiUsage()" style="padding:4px 12px;border-radius:6px;border:1px solid var(--border);background:var(--bg-secondary);color:var(--text-primary);cursor:pointer;font-size:12px;" id="geminiScrapeBtn">⟳ Refresh</button>
-          </div>
-        </div>
-        <div style="display:flex;flex-direction:column;gap:20px;" id="geminiUsageBars"></div>
-      </div>
-
-      <div class="grid grid-4 mb-24">
-        <div class="card">
-          <div class="metric accent">
-            <div class="metric-value" id="opusUsageLimits">0%</div>
-            <div class="metric-label">Opus 5h Window</div>
-          </div>
-        </div>
-        <div class="card">
-          <div class="metric">
-            <div class="metric-value" id="totalCalls">0</div>
-            <div class="metric-label">API Calls (5h)</div>
-          </div>
-        </div>
-        <div class="card">
-          <div class="metric">
-            <div class="metric-value" id="windowCost">$0.00</div>
-            <div class="metric-label">Window Cost</div>
-          </div>
-        </div>
-        <div class="card">
-          <div class="metric">
-            <div class="metric-value" id="burnRateDisplay">--</div>
-            <div class="metric-label">Burn Rate (tok/min)</div>
-          </div>
-        </div>
-      </div>
-
-      <div class="card mb-24">
-        <h3 class="card-title">Output Token Usage</h3>
-        <div style="display:flex;flex-direction:column;gap:28px;margin-top:8px;">
-          <div>
-            <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:8px;">
-              <span style="font-weight:600;font-size:15px;">Opus</span>
-              <span class="mono" style="font-size:13px;color:var(--text-secondary);" id="opusTokenLabel">0 / 88k</span>
-            </div>
-            <div style="height:28px;background:var(--bg-primary);border-radius:14px;overflow:hidden;position:relative;">
-              <div id="opusProgressBar" style="height:100%;border-radius:14px;transition:width 0.6s cubic-bezier(0.4,0,0.2,1);width:0%;background:linear-gradient(90deg,#10b981,#10b981);"></div>
-              <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:700;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,0.5);" id="opusProgressPct">0%</div>
+      <!-- Overview Tab -->
+      <div class="usage-tab-panel" id="usageTabOverview">
+        <div class="grid grid-4 mb-24">
+          <div class="card">
+            <div class="metric accent">
+              <div class="metric-value" id="costToday">$0.00</div>
+              <div class="metric-label">Today</div>
             </div>
           </div>
-          <div>
-            <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:8px;">
-              <span style="font-weight:600;font-size:15px;">Sonnet</span>
-              <span class="mono" style="font-size:13px;color:var(--text-secondary);" id="sonnetTokenLabel">0 / 220k</span>
+          <div class="card">
+            <div class="metric accent">
+              <div class="metric-value" id="costWeek">$0.00</div>
+              <div class="metric-label">This Week</div>
             </div>
-            <div style="height:28px;background:var(--bg-primary);border-radius:14px;overflow:hidden;position:relative;">
-              <div id="sonnetProgressBar" style="height:100%;border-radius:14px;transition:width 0.6s cubic-bezier(0.4,0,0.2,1);width:0%;background:linear-gradient(90deg,#10b981,#10b981);"></div>
-              <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:700;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,0.5);" id="sonnetProgressPct">0%</div>
+          </div>
+          <div class="card">
+            <div class="metric accent">
+              <div class="metric-value" id="costTotal">$0.00</div>
+              <div class="metric-label">All Time</div>
+            </div>
+          </div>
+          <div class="card">
+            <div class="metric">
+              <div class="metric-value" id="costAvg">$0.00</div>
+              <div class="metric-label">Avg/Day</div>
             </div>
           </div>
         </div>
-      </div>
 
-      <div class="grid grid-3 mb-24">
-        <div class="card" id="timeToLimitCard">
-          <h3 class="card-title">Est. Time to Limit</h3>
-          <div style="font-family:'JetBrains Mono',monospace;font-size:28px;font-weight:700;" id="timeToLimitValue">Safe</div>
-          <div style="font-size:12px;color:var(--text-muted);margin-top:8px;" id="timeToLimitSub">Low usage</div>
+        <div class="card mb-24">
+          <h3 class="card-title">Daily Spend Trend (Last 14 Days)</h3>
+          <div id="costTrendChart" style="min-height:240px;"></div>
         </div>
-        <div class="card">
-          <h3 class="card-title">Window Resets In</h3>
-          <div style="font-family:'JetBrains Mono',monospace;font-size:28px;font-weight:700;" id="windowResetValue">--</div>
-          <div style="font-size:12px;color:var(--text-muted);margin-top:8px;" id="windowResetSub"></div>
-        </div>
-        <div class="card">
-          <h3 class="card-title">Cost Per Minute</h3>
-          <div style="font-family:'JetBrains Mono',monospace;font-size:28px;font-weight:700;color:var(--accent);" id="costPerMinValue">$0.00</div>
-          <div style="font-size:12px;color:var(--text-muted);margin-top:8px;" id="costPerMinSub">Last 30 minutes</div>
-        </div>
-      </div>
 
-      <div class="grid grid-2 mb-24">
-        <div class="card">
-          <h3 class="card-title">Model Usage Breakdown</h3>
-          <div id="modelUsageDonut" style="display:flex;align-items:center;justify-content:center;min-height:300px;"></div>
-        </div>
-        <div class="card">
-          <h3 class="card-title">Window Cost Breakdown</h3>
-          <div id="windowBreakdown"></div>
-        </div>
-      </div>
-
-      <div class="card mb-24">
-        <h3 class="card-title">Recent API Calls</h3>
-        <div id="recentCalls" style="max-height:360px;overflow-y:auto;"></div>
-      </div>
-    </div>
-
-    <div class="page" id="costs">
-      <div class="page-header">
-        <h1 class="page-title">Costs</h1>
-        <p class="page-subtitle">Spending breakdown and trends</p>
-      </div>
-
-      <div class="grid grid-4 mb-24">
-        <div class="card">
-          <div class="metric accent">
-            <div class="metric-value" id="costToday">$0.00</div>
-            <div class="metric-label">Today</div>
+        <div class="card mb-24">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+            <h3 class="card-title" style="margin:0;">Claude Code Usage (Anthropic)</h3>
+            <div style="display:flex;align-items:center;gap:12px;">
+              <span style="font-size:11px;color:var(--text-muted);" id="claudeUsageScrapedAt">Not scraped yet</span>
+              <button onclick="scrapeClaudeUsage()" style="padding:4px 12px;border-radius:6px;border:1px solid var(--border);background:var(--bg-secondary);color:var(--text-primary);cursor:pointer;font-size:12px;" id="scrapeBtn">⟳ Refresh</button>
+            </div>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:20px;" id="claudeUsageBars">
+            <div>
+              <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:6px;">
+                <span style="font-weight:600;font-size:14px;">Session</span>
+                <span class="mono" style="font-size:12px;color:var(--text-secondary);" id="cuSessionLabel">--</span>
+              </div>
+              <div style="height:24px;background:var(--bg-primary);border-radius:12px;overflow:hidden;position:relative;">
+                <div id="cuSessionBar" style="height:100%;border-radius:12px;transition:width 0.6s;width:0%;background:linear-gradient(90deg,#10b981,#10b981);"></div>
+                <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,0.5);" id="cuSessionPct">--</div>
+              </div>
+              <div style="font-size:11px;color:var(--text-muted);margin-top:4px;" id="cuSessionReset"></div>
+            </div>
+            <div>
+              <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:6px;">
+                <span style="font-weight:600;font-size:14px;">Weekly (All Models)</span>
+                <span class="mono" style="font-size:12px;color:var(--text-secondary);" id="cuWeeklyLabel">--</span>
+              </div>
+              <div style="height:24px;background:var(--bg-primary);border-radius:12px;overflow:hidden;position:relative;">
+                <div id="cuWeeklyBar" style="height:100%;border-radius:12px;transition:width 0.6s;width:0%;background:linear-gradient(90deg,#10b981,#10b981);"></div>
+                <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,0.5);" id="cuWeeklyPct">--</div>
+              </div>
+              <div style="font-size:11px;color:var(--text-muted);margin-top:4px;" id="cuWeeklyReset"></div>
+            </div>
+            <div>
+              <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:6px;">
+                <span style="font-weight:600;font-size:14px;">Weekly (Sonnet)</span>
+                <span class="mono" style="font-size:12px;color:var(--text-secondary);" id="cuSonnetLabel">--</span>
+              </div>
+              <div style="height:24px;background:var(--bg-primary);border-radius:12px;overflow:hidden;position:relative;">
+                <div id="cuSonnetBar" style="height:100%;border-radius:12px;transition:width 0.6s;width:0%;background:linear-gradient(90deg,#10b981,#10b981);"></div>
+                <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,0.5);" id="cuSonnetPct">--</div>
+              </div>
+              <div style="font-size:11px;color:var(--text-muted);margin-top:4px;" id="cuSonnetReset"></div>
+            </div>
           </div>
         </div>
-        <div class="card">
-          <div class="metric accent">
-            <div class="metric-value" id="costWeek">$0.00</div>
-            <div class="metric-label">This Week</div>
+
+        <div class="card mb-24">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+            <h3 class="card-title" style="margin:0;">Gemini Usage (Google)</h3>
+            <div style="display:flex;align-items:center;gap:12px;">
+              <span style="font-size:11px;color:var(--text-muted);" id="geminiUsageScrapedAt">Not scraped yet</span>
+              <button onclick="scrapeGeminiUsage()" style="padding:4px 12px;border-radius:6px;border:1px solid var(--border);background:var(--bg-secondary);color:var(--text-primary);cursor:pointer;font-size:12px;" id="geminiScrapeBtn">⟳ Refresh</button>
+            </div>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:20px;" id="geminiUsageBars"></div>
+        </div>
+
+        <div class="grid grid-4 mb-24">
+          <div class="card">
+            <div class="metric accent">
+              <div class="metric-value" id="opusUsageLimits">0%</div>
+              <div class="metric-label">Opus 5h Window</div>
+            </div>
+          </div>
+          <div class="card">
+            <div class="metric">
+              <div class="metric-value" id="totalCalls">0</div>
+              <div class="metric-label">API Calls (5h)</div>
+            </div>
+          </div>
+          <div class="card">
+            <div class="metric">
+              <div class="metric-value" id="windowCost">$0.00</div>
+              <div class="metric-label">Window Cost</div>
+            </div>
+          </div>
+          <div class="card">
+            <div class="metric">
+              <div class="metric-value" id="burnRateDisplay">--</div>
+              <div class="metric-label">Burn Rate (tok/min)</div>
+            </div>
           </div>
         </div>
-        <div class="card">
-          <div class="metric accent">
-            <div class="metric-value" id="costTotal">$0.00</div>
-            <div class="metric-label">All Time</div>
+
+        <div class="card mb-24">
+          <h3 class="card-title">Output Token Usage</h3>
+          <div style="display:flex;flex-direction:column;gap:28px;margin-top:8px;">
+            <div>
+              <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:8px;">
+                <span style="font-weight:600;font-size:15px;">Opus</span>
+                <span class="mono" style="font-size:13px;color:var(--text-secondary);" id="opusTokenLabel">0 / 88k</span>
+              </div>
+              <div style="height:28px;background:var(--bg-primary);border-radius:14px;overflow:hidden;position:relative;">
+                <div id="opusProgressBar" style="height:100%;border-radius:14px;transition:width 0.6s cubic-bezier(0.4,0,0.2,1);width:0%;background:linear-gradient(90deg,#10b981,#10b981);"></div>
+                <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:700;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,0.5);" id="opusProgressPct">0%</div>
+              </div>
+            </div>
+            <div>
+              <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:8px;">
+                <span style="font-weight:600;font-size:15px;">Sonnet</span>
+                <span class="mono" style="font-size:13px;color:var(--text-secondary);" id="sonnetTokenLabel">0 / 220k</span>
+              </div>
+              <div style="height:28px;background:var(--bg-primary);border-radius:14px;overflow:hidden;position:relative;">
+                <div id="sonnetProgressBar" style="height:100%;border-radius:14px;transition:width 0.6s cubic-bezier(0.4,0,0.2,1);width:0%;background:linear-gradient(90deg,#10b981,#10b981);"></div>
+                <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:700;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,0.5);" id="sonnetProgressPct">0%</div>
+              </div>
+            </div>
           </div>
         </div>
-        <div class="card">
-          <div class="metric">
-            <div class="metric-value" id="costAvg">$0.00</div>
-            <div class="metric-label">Avg/Day</div>
+
+        <div class="grid grid-3 mb-24">
+          <div class="card" id="timeToLimitCard">
+            <h3 class="card-title">Est. Time to Limit</h3>
+            <div style="font-family:'JetBrains Mono',monospace;font-size:28px;font-weight:700;" id="timeToLimitValue">Safe</div>
+            <div style="font-size:12px;color:var(--text-muted);margin-top:8px;" id="timeToLimitSub">Low usage</div>
           </div>
+          <div class="card">
+            <h3 class="card-title">Window Resets In</h3>
+            <div style="font-family:'JetBrains Mono',monospace;font-size:28px;font-weight:700;" id="windowResetValue">--</div>
+            <div style="font-size:12px;color:var(--text-muted);margin-top:8px;" id="windowResetSub"></div>
+          </div>
+          <div class="card">
+            <h3 class="card-title">Cost Per Minute</h3>
+            <div style="font-family:'JetBrains Mono',monospace;font-size:28px;font-weight:700;color:var(--accent);" id="costPerMinValue">$0.00</div>
+            <div style="font-size:12px;color:var(--text-muted);margin-top:8px;" id="costPerMinSub">Last 30 minutes</div>
+          </div>
+        </div>
+
+        <div class="grid grid-2 mb-24">
+          <div class="card">
+            <h3 class="card-title">Model Usage Breakdown</h3>
+            <div id="modelUsageDonut" style="display:flex;align-items:center;justify-content:center;min-height:300px;"></div>
+          </div>
+          <div class="card">
+            <h3 class="card-title">Window Cost Breakdown</h3>
+            <div id="windowBreakdown"></div>
+          </div>
+        </div>
+
+        <div class="card mb-24">
+          <h3 class="card-title">Recent API Calls</h3>
+          <div id="recentCalls" style="max-height:360px;overflow-y:auto;"></div>
         </div>
       </div>
 
-      <div class="card mb-24">
-        <h3 class="card-title">Daily Spend Trend (Last 14 Days)</h3>
-        <div id="costTrendChart" style="min-height:240px;"></div>
+      <!-- Sessions Tab -->
+      <div class="usage-tab-panel" id="usageTabSessions" style="display:none;">
+        <div class="card mb-24" id="sessionsStatsBar" style="padding:16px 24px;">
+          <div style="display:flex;gap:32px;flex-wrap:wrap;align-items:center;">
+            <div style="display:flex;align-items:center;gap:8px;">
+              <span style="font-size:12px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.05em;">Sessions</span>
+              <span class="mono" style="font-size:20px;font-weight:700;" id="statsSessionCount">0</span>
+            </div>
+            <div style="display:flex;align-items:center;gap:8px;">
+              <span style="font-size:12px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.05em;">Tokens</span>
+              <span class="mono" style="font-size:20px;font-weight:700;" id="statsTotalTokens">0</span>
+            </div>
+            <div style="display:flex;align-items:center;gap:8px;">
+              <span style="font-size:12px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.05em;">Cost</span>
+              <span class="mono" style="font-size:20px;font-weight:700;color:var(--accent);" id="statsTotalCost">$0.00</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="card mb-24" style="padding:16px 24px;">
+          <h3 class="card-title" style="margin-bottom:12px;">Session Timeline</h3>
+          <div id="timelineCanvas" style="min-height:60px;"></div>
+        </div>
+
+        <div style="display:flex;flex-wrap:wrap;gap:12px;align-items:center;margin-bottom:20px;padding:16px 20px;background:var(--bg-card);border:1px solid var(--border);border-radius:12px;">
+          <div class="filter-chips" id="statusFilters">
+            <div class="chip active" data-filter="all">All</div>
+            <div class="chip" data-filter="running">Active</div>
+            <div class="chip" data-filter="complete">Idle</div>
+            <div class="chip" data-filter="subagent">Subs</div>
+            <div class="chip" data-filter="cron">Cron</div>
+            <div class="chip" data-filter="group">Groups</div>
+          </div>
+          <div style="width:1px;height:24px;background:var(--border);"></div>
+          <div class="filter-chips" id="modelFilters">
+            <div class="chip active" data-model="all">All Models</div>
+          </div>
+          <div style="width:1px;height:24px;background:var(--border);"></div>
+          <div class="filter-chips" id="dateFilters">
+            <div class="chip" data-range="today">Today</div>
+            <div class="chip active" data-range="7d">7d</div>
+            <div class="chip" data-range="30d">30d</div>
+            <div class="chip" data-range="all">All</div>
+          </div>
+          <input type="text" class="search-box" placeholder="🔍 Search..." id="sessionSearch" style="min-width:150px;max-width:250px;">
+        </div>
+
+        <div class="sessions-table">
+          <div class="table-header" style="grid-template-columns: 24px 32px 180px 70px 140px 90px 80px 1fr 90px;">
+            <div></div>
+            <div></div>
+            <div class="sortable" data-sort="label">Name</div>
+            <div class="sortable" data-sort="type">Type</div>
+            <div class="sortable" data-sort="model">Model</div>
+            <div class="sortable" data-sort="tokens">Tokens</div>
+            <div class="sortable" data-sort="cost">Cost</div>
+            <div>Last Message</div>
+            <div class="sortable" data-sort="updated">Updated</div>
+          </div>
+          <div id="sessionsTableBody"></div>
+        </div>
       </div>
 
-      <div class="grid grid-2">
-        <div class="card">
-          <h3 class="card-title">Cost by Model</h3>
-          <div id="costByModel"></div>
+      <!-- Breakdown Tab -->
+      <div class="usage-tab-panel" id="usageTabBreakdown" style="display:none;">
+        <div class="grid grid-2">
+          <div class="card">
+            <h3 class="card-title">Cost by Model</h3>
+            <div id="costByModel"></div>
+          </div>
+          <div class="card">
+            <h3 class="card-title">Top Sessions</h3>
+            <div id="topSessions"></div>
+          </div>
         </div>
-        <div class="card">
-          <h3 class="card-title">Top Sessions</h3>
-          <div id="topSessions"></div>
-        </div>
-      </div>
 
-      <div class="card" style="margin-top:24px;">
-        <h3 class="card-title">Cost by Agent</h3>
-        <div id="costByAgent"></div>
+        <div class="card" style="margin-top:24px;">
+          <h3 class="card-title">Cost by Agent</h3>
+          <div id="costByAgent"></div>
+        </div>
       </div>
     </div>
 
@@ -3601,10 +3612,8 @@ body {
   <div class="shortcuts-panel">
     <h2 style="font-size:24px;font-weight:700;margin-bottom:24px;">Keyboard Shortcuts</h2>
     <div class="shortcut-item"><span>Switch to Overview</span><span class="shortcut-key">1</span></div>
-    <div class="shortcut-item"><span>Switch to Sessions</span><span class="shortcut-key">2</span></div>
-    <div class="shortcut-item"><span>Switch to Costs</span><span class="shortcut-key">3</span></div>
-    <div class="shortcut-item"><span>Switch to Rate Limits</span><span class="shortcut-key">4</span></div>
-    <div class="shortcut-item"><span>Switch to Live Feed</span><span class="shortcut-key">5</span></div>
+    <div class="shortcut-item"><span>Switch to Usage</span><span class="shortcut-key">2</span></div>
+    <div class="shortcut-item"><span>Switch to Live Feed</span><span class="shortcut-key">3</span></div>
     <div class="shortcut-item"><span>Pause/Resume Feed</span><span class="shortcut-key">Space</span></div>
     <div class="shortcut-item"><span>Focus Search</span><span class="shortcut-key">/</span></div>
     <div class="shortcut-item"><span>Close Modals</span><span class="shortcut-key">Esc</span></div>
@@ -4595,6 +4604,17 @@ let liveEventSource = null;
 let sortBy = 'updated';
 let sortDir = 'desc';
 let selectedSessions = new Set();
+let currentUsageTab = 'overview';
+
+function switchUsageTab(tabName) {
+  currentUsageTab = tabName;
+  document.querySelectorAll('.usage-tab').forEach(t => t.classList.remove('active'));
+  const tabBtn = document.querySelector(`.usage-tab[data-tab="${tabName}"]`);
+  if (tabBtn) tabBtn.classList.add('active');
+  document.querySelectorAll('.usage-tab-panel').forEach(p => p.style.display = 'none');
+  const panel = document.getElementById('usageTab' + tabName.charAt(0).toUpperCase() + tabName.slice(1));
+  if (panel) panel.style.display = 'block';
+}
 let notificationsEnabled = false;
 
 document.querySelectorAll('.nav-item').forEach(item => {
@@ -4605,13 +4625,16 @@ document.querySelectorAll('.nav-item').forEach(item => {
     document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
     document.getElementById(page).classList.add('active');
     
+    if (page === 'usage') {
+      switchUsageTab(currentUsageTab);
+    }
     if (page === 'feed') {
       // Don't auto-connect; user clicks Start
     } else if (liveEventSource) {
       liveEventSource.close();
       liveEventSource = null;
     }
-    
+
     if (page === 'memory') {
       fetchJournalEntries();
     }
@@ -4652,7 +4675,9 @@ document.querySelectorAll('.view-all-link').forEach(link => {
   link.addEventListener('click', (e) => {
     e.preventDefault();
     const page = link.dataset.page;
+    const tab = link.dataset.tab;
     document.querySelector(`[data-page="${page}"]`).click();
+    if (tab) switchUsageTab(tab);
   });
 });
 
@@ -6496,8 +6521,8 @@ function formatTimeAgo(ms, future) {
 document.addEventListener('keydown', (e) => {
   if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.tagName === 'SELECT') return;
   
-  const pages = ['overview', 'sessions', 'costs', 'limits', 'feed'];
-  if (e.key >= '1' && e.key <= '5') {
+  const pages = ['overview', 'usage', 'feed'];
+  if (e.key >= '1' && e.key <= '3') {
     const idx = parseInt(e.key) - 1;
     if (pages[idx]) {
       document.querySelector(`[data-page="${pages[idx]}"]`).click();
@@ -6512,7 +6537,7 @@ document.addEventListener('keydown', (e) => {
   } else if (e.key === '/') {
     e.preventDefault();
     const activePage = document.querySelector('.page.active').id;
-    if (activePage === 'sessions') {
+    if (activePage === 'usage' && currentUsageTab === 'sessions') {
       document.getElementById('sessionSearch').focus();
     } else if (activePage === 'feed') {
       document.getElementById('feedSearchInput').focus();
