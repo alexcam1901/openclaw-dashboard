@@ -7232,11 +7232,25 @@ document.addEventListener('DOMContentLoaded', () => {
 let taskBoardData = [];
 let _dragTaskId = null;
 
-// Map agent/manual status → kanban column
+// Map agent/manual/github status → kanban column
 function taskToKanbanCol(task) {
   if (task.source === 'manual') {
     const valid = ['backlog', 'in-progress', 'review', 'done'];
     return valid.includes(task.status) ? task.status : 'backlog';
+  }
+  if (task.source === 'github') {
+    // Check if there's an agent task linked to this issue
+    const linked = taskBoardData.find(t =>
+      t.source === 'agent' && t.description &&
+      t.description.includes('#' + task.issueNumber) &&
+      t.project === task.project
+    );
+    if (linked) {
+      if (linked.status === 'running') return 'in-progress';
+      if (linked.status === 'needs-review') return 'review';
+      if (['done', 'merged'].includes(linked.status)) return 'done';
+    }
+    return 'backlog';
   }
   // agent task: map agent statuses
   const map = { running: 'in-progress', 'needs-review': 'review', done: 'done', merged: 'done', failed: 'done' };
@@ -7257,7 +7271,21 @@ function renderKanbanBoard() {
   const cols = ['backlog', 'in-progress', 'review', 'done'];
   const grouped = { backlog: [], 'in-progress': [], review: [], done: [] };
 
+  // Build set of agent task IDs that are linked to a GitHub issue (to suppress duplicates)
+  const linkedAgentIds = new Set();
   taskBoardData.forEach(task => {
+    if (task.source !== 'github') return;
+    const linked = taskBoardData.find(t =>
+      t.source === 'agent' && t.description &&
+      t.description.includes('#' + task.issueNumber) &&
+      t.project === task.project
+    );
+    if (linked) linkedAgentIds.add(linked.id);
+  });
+
+  taskBoardData.forEach(task => {
+    // Skip agent tasks that are represented by a GitHub issue card
+    if (task.source === 'agent' && linkedAgentIds.has(task.id)) return;
     const col = taskToKanbanCol(task);
     if (grouped[col]) grouped[col].push(task);
   });
@@ -7346,12 +7374,49 @@ function renderKanbanBoard() {
   });
 }
 
+// Deterministic color from a string (for project badges)
+function strColor(str) {
+  const palette = ['#6366f1','#0ea5e9','#10b981','#f59e0b','#ef4444','#8b5cf6','#ec4899','#14b8a6'];
+  let h = 0;
+  for (let i = 0; i < str.length; i++) h = (h * 31 + str.charCodeAt(i)) & 0xffffffff;
+  return palette[Math.abs(h) % palette.length];
+}
+
 function buildTaskCard(task) {
   const isManual = task.source === 'manual';
+  const isGithub = task.source === 'github';
   const title = task.title || task.id || '(untitled)';
   const desc = task.description || '';
   const project = task.project || (typeof task.repo === 'string' ? task.repo.replace(/.*\//, '') : '') || '';
   const priority = task.priority || '';
+
+  // --- GitHub issue card ---
+  if (isGithub) {
+    const projectColor = strColor(project);
+    const projectBadge = project
+      ? `<span style="background:${projectColor};color:#fff;font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;">${esc(project)}</span>`
+      : '';
+    const issueNum = task.issueNumber ? `<span style="color:var(--text-muted);font-size:11px;">#${task.issueNumber}</span>` : '';
+    const labelsHtml = (task.labels || []).map(l =>
+      `<span style="background:var(--surface2,#2a2a3a);color:var(--text-muted);font-size:10px;padding:1px 5px;border-radius:3px;">${esc(l)}</span>`
+    ).join('');
+    const urlAttr = task.url ? ` href="${esc(task.url)}" target="_blank" rel="noopener"` : '';
+    const borderColor = strColor(project);
+    return `<a class="kanban-card kanban-card-github" data-task-id="${esc(task.id)}" data-source="github"
+      style="border-left:3px solid ${borderColor};text-decoration:none;display:block;cursor:pointer;"
+      ${urlAttr}>
+      <div class="kc-title" style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
+        ${issueNum}
+        <span>${esc(title.slice(0, 80))}</span>
+      </div>
+      <div class="kc-meta" style="flex-wrap:wrap;gap:4px;">
+        ${projectBadge}
+        ${labelsHtml}
+      </div>
+    </a>`;
+  }
+
+  // --- Manual / agent card ---
   const draggable = isManual ? 'draggable="true"' : '';
   const deleteBtn = isManual ? `<button class="kc-delete" title="Delete">✕</button>` : '';
   const sourceBadge = isManual
@@ -7362,7 +7427,6 @@ function buildTaskCard(task) {
     : '';
   const projectText = project ? `<span style="color:var(--text-muted);">${esc(project)}</span>` : '';
 
-  // For agent tasks, show status badge
   let agentStatusHtml = '';
   if (!isManual && task.status) {
     const colors = { running: 'var(--accent)', 'needs-review': 'var(--yellow)', done: 'var(--green)', merged: 'var(--purple)', failed: 'var(--red)' };
