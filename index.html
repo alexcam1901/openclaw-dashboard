@@ -2906,6 +2906,11 @@ body {
           <div id="topSessions"></div>
         </div>
       </div>
+
+      <div class="card" style="margin-top:24px;">
+        <h3 class="card-title">Cost by Agent</h3>
+        <div id="costByAgent"></div>
+      </div>
     </div>
 
     <div class="page" id="feed">
@@ -5557,7 +5562,27 @@ function updateCosts() {
         </div>
       `).join('');
   
-  document.getElementById('topSessions').innerHTML = topHtml || 
+  document.getElementById('topSessions').innerHTML = topHtml ||
+    '<div class="empty-state-text">No data</div>';
+
+  const agentColors = ['var(--accent)', 'var(--green)', 'var(--purple)', 'var(--yellow)', 'var(--cyan)', 'var(--blue)'];
+  const agentEntries = Object.entries(costs.perAgent || {}).sort((a, b) => b[1] - a[1]);
+  const maxAgent = agentEntries.length > 0 ? agentEntries[0][1] : 0.01;
+  const agentHtml = agentEntries.map(([agent, cost], i) => {
+    const pct = Math.max(2, (cost / maxAgent) * 100);
+    const color = agentColors[i % agentColors.length];
+    return `
+      <div style="display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--border);">
+        <span class="mono" style="min-width:120px;max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex-shrink:0;">${agent}</span>
+        <div style="flex:1;background:var(--bg-tertiary);border-radius:4px;height:8px;overflow:hidden;">
+          <div style="width:${pct.toFixed(1)}%;height:100%;background:${color};border-radius:4px;transition:width 0.6s ease;"></div>
+        </div>
+        <span class="mono" style="font-weight:700;min-width:60px;text-align:right;">$${cost.toFixed(2)}</span>
+      </div>
+    `;
+  }).join('');
+
+  document.getElementById('costByAgent').innerHTML = agentHtml ||
     '<div class="empty-state-text">No data</div>';
 }
 
