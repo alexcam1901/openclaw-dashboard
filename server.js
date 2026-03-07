@@ -992,6 +992,20 @@ function getUsageWindows() {
           if (d.type !== 'message') continue;
           const msg = d.message;
           if (!msg || !msg.usage) continue;
+          // GATEWAY_RESPONSE_DEBUG: log full response entry to inspect resolved model fields
+          // (resolved_model, x-resolved-model, x-model, x-model-used) and any gateway metadata
+          console.log('GATEWAY_RESPONSE_DEBUG:', JSON.stringify({
+            timestamp: d.timestamp,
+            model: msg.model,
+            resolved_model: msg.resolved_model,
+            provider: msg.provider,
+            'x-resolved-model': msg['x-resolved-model'],
+            'x-model': msg['x-model'],
+            'x-model-used': msg['x-model-used'],
+            headers: d.headers || msg.headers,
+            usage: msg.usage,
+            role: msg.role
+          }));
           const ts = d.timestamp ? new Date(d.timestamp).getTime() : 0;
           if (!ts) continue;
           const provider = normalizeProvider(msg.provider);

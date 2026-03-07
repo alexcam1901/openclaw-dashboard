@@ -2567,7 +2567,7 @@ body {
       </div>
       <div class="nav-item" data-page="usage">
         <span class="icon">📊</span>
-        <span class="nav-text">Usage</span>
+        <span class="nav-text">Cost</span>
       </div>
       <div class="nav-item" data-page="memory">
         <span class="icon">🧠</span>
@@ -2898,69 +2898,9 @@ body {
           <div id="costTrendChart" style="min-height:240px;"></div>
         </div>
 
-        <div class="card mb-24">
-          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
-            <h3 class="card-title" style="margin:0;">Claude Code Usage (Anthropic)</h3>
-            <div style="display:flex;align-items:center;gap:12px;">
-              <span style="font-size:11px;color:var(--text-muted);" id="claudeUsageScrapedAt">Not scraped yet</span>
-              <button onclick="scrapeClaudeUsage()" style="padding:4px 12px;border-radius:6px;border:1px solid var(--border);background:var(--bg-secondary);color:var(--text-primary);cursor:pointer;font-size:12px;" id="scrapeBtn">⟳ Refresh</button>
-            </div>
-          </div>
-          <div style="display:flex;flex-direction:column;gap:20px;" id="claudeUsageBars">
-            <div>
-              <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:6px;">
-                <span style="font-weight:600;font-size:14px;">Session</span>
-                <span class="mono" style="font-size:12px;color:var(--text-secondary);" id="cuSessionLabel">--</span>
-              </div>
-              <div style="height:24px;background:var(--bg-primary);border-radius:12px;overflow:hidden;position:relative;">
-                <div id="cuSessionBar" style="height:100%;border-radius:12px;transition:width 0.6s;width:0%;background:linear-gradient(90deg,#10b981,#10b981);"></div>
-                <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,0.5);" id="cuSessionPct">--</div>
-              </div>
-              <div style="font-size:11px;color:var(--text-muted);margin-top:4px;" id="cuSessionReset"></div>
-            </div>
-            <div>
-              <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:6px;">
-                <span style="font-weight:600;font-size:14px;">Weekly (All Models)</span>
-                <span class="mono" style="font-size:12px;color:var(--text-secondary);" id="cuWeeklyLabel">--</span>
-              </div>
-              <div style="height:24px;background:var(--bg-primary);border-radius:12px;overflow:hidden;position:relative;">
-                <div id="cuWeeklyBar" style="height:100%;border-radius:12px;transition:width 0.6s;width:0%;background:linear-gradient(90deg,#10b981,#10b981);"></div>
-                <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,0.5);" id="cuWeeklyPct">--</div>
-              </div>
-              <div style="font-size:11px;color:var(--text-muted);margin-top:4px;" id="cuWeeklyReset"></div>
-            </div>
-            <div>
-              <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:6px;">
-                <span style="font-weight:600;font-size:14px;">Weekly (Sonnet)</span>
-                <span class="mono" style="font-size:12px;color:var(--text-secondary);" id="cuSonnetLabel">--</span>
-              </div>
-              <div style="height:24px;background:var(--bg-primary);border-radius:12px;overflow:hidden;position:relative;">
-                <div id="cuSonnetBar" style="height:100%;border-radius:12px;transition:width 0.6s;width:0%;background:linear-gradient(90deg,#10b981,#10b981);"></div>
-                <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,0.5);" id="cuSonnetPct">--</div>
-              </div>
-              <div style="font-size:11px;color:var(--text-muted);margin-top:4px;" id="cuSonnetReset"></div>
-            </div>
-          </div>
-        </div>
 
-        <div class="card mb-24">
-          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
-            <h3 class="card-title" style="margin:0;">Gemini Usage (Google)</h3>
-            <div style="display:flex;align-items:center;gap:12px;">
-              <span style="font-size:11px;color:var(--text-muted);" id="geminiUsageScrapedAt">Not scraped yet</span>
-              <button onclick="scrapeGeminiUsage()" style="padding:4px 12px;border-radius:6px;border:1px solid var(--border);background:var(--bg-secondary);color:var(--text-primary);cursor:pointer;font-size:12px;" id="geminiScrapeBtn">⟳ Refresh</button>
-            </div>
-          </div>
-          <div style="display:flex;flex-direction:column;gap:20px;" id="geminiUsageBars"></div>
-        </div>
 
-        <div class="grid grid-4 mb-24">
-          <div class="card">
-            <div class="metric accent">
-              <div class="metric-value" id="opusUsageLimits">0%</div>
-              <div class="metric-label">Opus 5h Window</div>
-            </div>
-          </div>
+        <div class="grid grid-3 mb-24">
           <div class="card">
             <div class="metric">
               <div class="metric-value" id="totalCalls">0</div>
@@ -2981,49 +2921,6 @@ body {
           </div>
         </div>
 
-        <div class="card mb-24">
-          <h3 class="card-title">Output Token Usage</h3>
-          <div style="display:flex;flex-direction:column;gap:28px;margin-top:8px;">
-            <div>
-              <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:8px;">
-                <span style="font-weight:600;font-size:15px;">Opus</span>
-                <span class="mono" style="font-size:13px;color:var(--text-secondary);" id="opusTokenLabel">0 / 88k</span>
-              </div>
-              <div style="height:28px;background:var(--bg-primary);border-radius:14px;overflow:hidden;position:relative;">
-                <div id="opusProgressBar" style="height:100%;border-radius:14px;transition:width 0.6s cubic-bezier(0.4,0,0.2,1);width:0%;background:linear-gradient(90deg,#10b981,#10b981);"></div>
-                <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:700;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,0.5);" id="opusProgressPct">0%</div>
-              </div>
-            </div>
-            <div>
-              <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:8px;">
-                <span style="font-weight:600;font-size:15px;">Sonnet</span>
-                <span class="mono" style="font-size:13px;color:var(--text-secondary);" id="sonnetTokenLabel">0 / 220k</span>
-              </div>
-              <div style="height:28px;background:var(--bg-primary);border-radius:14px;overflow:hidden;position:relative;">
-                <div id="sonnetProgressBar" style="height:100%;border-radius:14px;transition:width 0.6s cubic-bezier(0.4,0,0.2,1);width:0%;background:linear-gradient(90deg,#10b981,#10b981);"></div>
-                <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:700;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,0.5);" id="sonnetProgressPct">0%</div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div class="grid grid-3 mb-24">
-          <div class="card" id="timeToLimitCard">
-            <h3 class="card-title">Est. Time to Limit</h3>
-            <div style="font-family:'JetBrains Mono',monospace;font-size:28px;font-weight:700;" id="timeToLimitValue">Safe</div>
-            <div style="font-size:12px;color:var(--text-muted);margin-top:8px;" id="timeToLimitSub">Low usage</div>
-          </div>
-          <div class="card">
-            <h3 class="card-title">Window Resets In</h3>
-            <div style="font-family:'JetBrains Mono',monospace;font-size:28px;font-weight:700;" id="windowResetValue">--</div>
-            <div style="font-size:12px;color:var(--text-muted);margin-top:8px;" id="windowResetSub"></div>
-          </div>
-          <div class="card">
-            <h3 class="card-title">Cost Per Minute</h3>
-            <div style="font-family:'JetBrains Mono',monospace;font-size:28px;font-weight:700;color:var(--accent);" id="costPerMinValue">$0.00</div>
-            <div style="font-size:12px;color:var(--text-muted);margin-top:8px;" id="costPerMinSub">Last 30 minutes</div>
-          </div>
-        </div>
 
         <div class="grid grid-2 mb-24">
           <div class="card">
@@ -5654,6 +5551,10 @@ function updateLimits() {
         <div>
           <div class="mono" style="font-weight:600;">${shortModel}</div>
           <div style="color:var(--text-muted);font-size:11px;">${call.ago}</div>
+        </div>
+        <div style="text-align:center;">
+          <div class="mono">${(call.input || 0).toLocaleString()}</div>
+          <div style="color:var(--text-muted);font-size:11px;">ctx tokens</div>
         </div>
         <div style="text-align:right;">
           <div class="mono">${call.output.toLocaleString()} out</div>
