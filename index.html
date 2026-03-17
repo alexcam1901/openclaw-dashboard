@@ -3708,11 +3708,10 @@ body {
 #acc .oc-filter-bar {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
   margin-bottom: 12px;
   flex-wrap: wrap;
 }
-#acc .oc-filter-bar select,
 #acc .oc-filter-bar input {
   padding: 7px 12px;
   background: var(--bg-secondary);
@@ -3720,9 +3719,30 @@ body {
   border-radius: 6px;
   color: var(--text-primary);
   font-size: 13px;
+  flex: 1;
+  min-width: 160px;
 }
-#acc .oc-filter-bar input { flex: 1; min-width: 160px; }
-#acc .oc-count { font-size: 12px; color: var(--text-muted); margin-left: auto; }
+#acc .oc-chip {
+  padding: 5px 12px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  color: var(--text-secondary);
+  transition: all 0.15s;
+  user-select: none;
+  white-space: nowrap;
+}
+#acc .oc-chip:hover { color: var(--text-primary); border-color: var(--accent); }
+#acc .oc-chip.active { background: rgba(99,102,241,0.15); border-color: var(--accent); color: var(--accent); }
+#acc .oc-count { font-size: 12px; color: var(--text-muted); margin-left: auto; white-space: nowrap; }
+#acc .oc-sort-icon { margin-left: 4px; opacity: 0.4; font-style: normal; }
+#acc .oc-header-cell { cursor: pointer; display: flex; align-items: center; gap: 2px; user-select: none; }
+#acc .oc-header-cell:hover { color: var(--text-primary); }
+#acc .oc-header-cell.sorted { color: var(--accent); }
+#acc .oc-header-cell.sorted .oc-sort-icon { opacity: 1; }
 #acc .oc-header {
   display: grid;
   grid-template-columns: minmax(0,3fr) minmax(0,1.2fr) minmax(0,1fr) minmax(0,1fr) minmax(0,0.8fr) minmax(0,1fr) minmax(0,2fr);
@@ -3818,26 +3838,24 @@ body {
 
   <div id="acc-tab-openclaw" class="acc-tab-content" style="display:none;">
     <div class="oc-filter-bar">
-      <select id="oc-filter-select" onchange="ocApplyFilter()">
-        <option value="all">All</option>
-        <option value="active">Active</option>
-        <option value="agents">Agents</option>
-        <option value="crons">Crons</option>
-        <option value="subagents">Subagents</option>
-      </select>
-      <input type="text" id="oc-search" placeholder="🔍 search..." oninput="ocApplyFilter()">
+      <span class="oc-chip active" data-filter="all" onclick="ocToggleChip(this)">All</span>
+      <span class="oc-chip" data-filter="active" onclick="ocToggleChip(this)">Active</span>
+      <span class="oc-chip" data-filter="agents" onclick="ocToggleChip(this)">Agents</span>
+      <span class="oc-chip" data-filter="crons" onclick="ocToggleChip(this)">Crons</span>
+      <span class="oc-chip" data-filter="subagents" onclick="ocToggleChip(this)">Subagents</span>
+      <input type="text" id="oc-search" placeholder="🔍 search key..." oninput="ocApplyFilter()">
       <span class="oc-count" id="oc-count"></span>
       <button class="btn" style="background:var(--bg-secondary);color:var(--text-primary);border:1px solid var(--border);padding:7px 14px;border-radius:6px;cursor:pointer;font-size:13px;" onclick="ocFetchSessions()">🔄 Refresh</button>
     </div>
     <div class="card" style="padding:0; overflow:hidden;">
       <div class="oc-header">
-        <div>Key</div>
-        <div>Model</div>
-        <div>Channel</div>
-        <div>Tokens</div>
-        <div>Cost</div>
-        <div>Updated</div>
-        <div>Last Message</div>
+        <div class="oc-header-cell" data-col="key" onclick="ocSortBy('key')">Key <i class="oc-sort-icon" id="oc-sort-key">↕</i></div>
+        <div class="oc-header-cell" data-col="model" onclick="ocSortBy('model')">Model <i class="oc-sort-icon" id="oc-sort-model">↕</i></div>
+        <div class="oc-header-cell" data-col="channel" onclick="ocSortBy('channel')">Channel <i class="oc-sort-icon" id="oc-sort-channel">↕</i></div>
+        <div class="oc-header-cell" data-col="tokens" onclick="ocSortBy('tokens')">Tokens <i class="oc-sort-icon" id="oc-sort-tokens">↕</i></div>
+        <div class="oc-header-cell" data-col="cost" onclick="ocSortBy('cost')">Cost <i class="oc-sort-icon" id="oc-sort-cost">↕</i></div>
+        <div class="oc-header-cell" data-col="updated" onclick="ocSortBy('updated')">Updated <i class="oc-sort-icon" id="oc-sort-updated">↕</i></div>
+        <div class="oc-header-cell" data-col="lastmsg" onclick="ocSortBy('lastmsg')">Last Message <i class="oc-sort-icon" id="oc-sort-lastmsg">↕</i></div>
       </div>
       <div id="oc-sessions-list">
         <div class="acc-empty">Loading...</div>
@@ -4064,20 +4082,92 @@ body {
     document.getElementById('oc-stat-top-model').textContent = ocFmtModel(stats.topModel || '-');
   }
 
+    // Sort state
+  let ocSortCol = 'updated';
+  let ocSortDir = 'desc'; // 'asc' | 'desc'
+  // Active filter chips (multi-select; 'all' is exclusive)
+  let ocActiveFilters = new Set(['all']);
+
+  window.ocToggleChip = function(chip) {
+    const f = chip.dataset.filter;
+    if (f === 'all') {
+      // All clears everything else
+      ocActiveFilters = new Set(['all']);
+    } else {
+      ocActiveFilters.delete('all');
+      if (ocActiveFilters.has(f)) {
+        ocActiveFilters.delete(f);
+        if (ocActiveFilters.size === 0) ocActiveFilters.add('all');
+      } else {
+        ocActiveFilters.add(f);
+      }
+    }
+    // Sync chip UI
+    document.querySelectorAll('#acc .oc-chip').forEach(c => {
+      c.classList.toggle('active', ocActiveFilters.has(c.dataset.filter));
+    });
+    ocApplyFilter();
+  };
+
+  window.ocSortBy = function(col) {
+    if (ocSortCol === col) {
+      ocSortDir = ocSortDir === 'asc' ? 'desc' : 'asc';
+    } else {
+      ocSortCol = col;
+      ocSortDir = col === 'key' || col === 'model' || col === 'channel' || col === 'lastmsg' ? 'asc' : 'desc';
+    }
+    // Update sort icons
+    ['key','model','channel','tokens','cost','updated','lastmsg'].forEach(c => {
+      const el = document.getElementById('oc-sort-' + c);
+      const hdr = document.querySelector('#acc .oc-header-cell[data-col="' + c + '"]');
+      if (!el || !hdr) return;
+      if (c === ocSortCol) {
+        el.textContent = ocSortDir === 'asc' ? '↑' : '↓';
+        hdr.classList.add('sorted');
+      } else {
+        el.textContent = '↕';
+        hdr.classList.remove('sorted');
+      }
+    });
+    ocApplyFilter();
+  };
+
   window.ocApplyFilter = function() {
-    const filter = document.getElementById('oc-filter-select')?.value || 'all';
     const search = (document.getElementById('oc-search')?.value || '').toLowerCase();
-    const filtered = ocSessionsAll.filter(s => {
+    let filtered = ocSessionsAll.filter(s => {
       const key = s.key || '';
-      if (filter === 'active' && Date.now() - (s.updatedAt || 0) >= 3600000) return false;
-      if (filter === 'agents' && !/^agent:[^:]+:main$/.test(key)) return false;
-      if (filter === 'crons' && !key.includes(':cron:')) return false;
-      if (filter === 'subagents' && !key.includes(':subagent:')) return false;
-      if (search && !key.toLowerCase().includes(search)) return false;
+      // Multi-filter: pass if matches ANY active non-all filter
+      if (!ocActiveFilters.has('all')) {
+        const matchesAny = [...ocActiveFilters].some(f => {
+          if (f === 'active') return Date.now() - (s.updatedAt || 0) < 3600000;
+          if (f === 'agents') return /^agent:[^:]+:main$/.test(key);
+          if (f === 'crons')  return key.includes(':cron:');
+          if (f === 'subagents') return key.includes(':subagent:');
+          return true;
+        });
+        if (!matchesAny) return false;
+      }
+      if (search && !key.toLowerCase().includes(search) && !(s.lastMessage||'').toLowerCase().includes(search)) return false;
       return true;
     });
+
+    // Sort
+    filtered = filtered.slice().sort((a, b) => {
+      let va, vb;
+      if (ocSortCol === 'key')     { va = a.key || ''; vb = b.key || ''; }
+      else if (ocSortCol === 'model')   { va = ocFmtModel(a.model||''); vb = ocFmtModel(b.model||''); }
+      else if (ocSortCol === 'channel') { va = a.channel||''; vb = b.channel||''; }
+      else if (ocSortCol === 'tokens')  { va = a.totalTokens||0; vb = b.totalTokens||0; }
+      else if (ocSortCol === 'cost')    { va = a.cost||0; vb = b.cost||0; }
+      else if (ocSortCol === 'updated') { va = a.updatedAt||0; vb = b.updatedAt||0; }
+      else if (ocSortCol === 'lastmsg') { va = a.lastMessage||''; vb = b.lastMessage||''; }
+      else { va = 0; vb = 0; }
+      if (typeof va === 'string') return ocSortDir === 'asc' ? va.localeCompare(vb) : vb.localeCompare(va);
+      return ocSortDir === 'asc' ? va - vb : vb - va;
+    });
+
     const countEl = document.getElementById('oc-count');
-    if (countEl) countEl.textContent = 'Showing ' + filtered.length + ' of ' + ocSessionsAll.length + ' sessions';
+    if (countEl) countEl.textContent = 'Showing ' + filtered.length + ' of ' + ocSessionsAll.length;
     ocRenderTable(filtered);
   };
 
