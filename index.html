@@ -3918,6 +3918,9 @@ body {
   <div id="acc-tab-tree" class="acc-tab-content" style="display:none;">
     <div class="tree-search-bar">
       <input type="text" id="tree-search" placeholder="🔍 search agents..." oninput="treeApplyFilter()">
+      <span style="font-size:12px;color:var(--text-muted);white-space:nowrap;">🟢 running if updated within</span>
+      <input type="number" id="tree-running-mins" value="60" min="1" max="480" style="width:60px;padding:5px 8px;background:var(--bg-secondary);border:1px solid var(--border);border-radius:6px;color:var(--text-primary);font-size:13px;text-align:center;" oninput="treeApplyFilter()">
+      <span style="font-size:12px;color:var(--text-muted);">min</span>
       <button class="btn" style="background:var(--bg-secondary);color:var(--text-primary);border:1px solid var(--border);padding:7px 14px;border-radius:6px;cursor:pointer;font-size:13px;" onclick="treeFetchSessions()">🔄 Refresh</button>
     </div>
     <div id="tree-container">
@@ -4477,7 +4480,8 @@ body {
 
       // Status dot
       const ageDiff = now - lastActiveTs;
-      const hasRunningChild = g.children.some(c => (now - (c.updatedAt||0)) < 180000 && c._parsed?.kind === 'subagent');
+      const runningMs = (parseInt(document.getElementById('tree-running-mins')?.value || '60', 10) || 60) * 60000;
+      const hasRunningChild = g.children.some(c => (now - (c.updatedAt||0)) < runningMs && c._parsed?.kind === 'subagent');
 const dotCls = hasRunningChild ? 'running' : ageDiff < 300000 ? 'active' : ageDiff < 3600000 ? 'recent' : 'idle';
 
       const model = g.main ? ocFmtModel(g.main.model || '-') : '-';
@@ -4487,7 +4491,7 @@ const dotCls = hasRunningChild ? 'running' : ageDiff < 300000 ? 'active' : ageDi
       const toggleIcon = collapsed ? '▶' : '▼';
       const expandedCls = collapsed ? '' : ' expanded';
 
-      const parentHtml = '<div class="tree-parent' + expandedCls + '" onclick="treeToggle(' + JSON.stringify(g.name) + ')">' +
+      const parentHtml = '<div class="tree-parent' + expandedCls + '" onclick="treeToggle(\'' + accEsc(g.name) + '\')">' +
         '<div class="tree-parent-name"><span class="tree-toggle">' + toggleIcon + '</span>' +
         '<span class="tree-status-dot ' + dotCls + '"></span>' + escapedName + '</div>' +
         '<div class="tree-meta">' + accEsc(model) + '</div>' +
@@ -4510,9 +4514,9 @@ const dotCls = hasRunningChild ? 'running' : ageDiff < 300000 ? 'active' : ageDi
         const cCost = '$' + (c.cost || 0).toFixed(2);
         const cTime = ocRelTime(c.updatedAt);
         const cMsg = accEsc((c.lastMessage || '').slice(0, 60));
-        // Running = updated within last 3 minutes and is a subagent
+        // Running = updated within configurable threshold and is a subagent
         const cAge = now - (c.updatedAt || 0);
-        const isRunning = cAge < 180000 && c._parsed?.kind === 'subagent';
+        const isRunning = cAge < runningMs && c._parsed?.kind === 'subagent';
         const cDotCls = isRunning ? 'running' : cAge < 300000 ? 'active' : cAge < 3600000 ? 'recent' : 'idle';
         const runningBadge = isRunning ? '<span class="tree-running-badge">running</span>' : '';
         return '<div class="tree-child">' +
