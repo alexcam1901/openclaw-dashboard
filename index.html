@@ -4315,10 +4315,16 @@ body {
     return { name, kind, rest, isParent: kind === 'main' };
   }
 
-  function treeChildLabel(kind, rest) {
-    if (kind === 'subagent') return 'subagent:' + rest.slice(0, 8);
-    if (kind === 'cron' && rest.includes(':run')) return '\u21b3 run:' + rest.split(':')[0].slice(0, 8);
-    if (kind === 'cron') return 'cron:' + rest.slice(0, 8);
+  function treeChildLabel(kind, rest, sessionLabel) {
+    const uuid = rest.split(':')[0];
+    const shortId = uuid.slice(0, 8);
+    // Use the session's label field if it's meaningful (not just the uuid prefix)
+    const namedLabel = sessionLabel && sessionLabel !== shortId && !sessionLabel.match(/^[0-9a-f-]{8,}$/)
+      ? sessionLabel + ' (' + shortId + ')'
+      : null;
+    if (kind === 'subagent') return namedLabel || ('subagent:' + shortId);
+    if (kind === 'cron' && rest.includes(':run')) return '\u21b3 run:' + shortId;
+    if (kind === 'cron') return namedLabel || ('cron:' + shortId);
     if (kind === 'telegram') return 'telegram:' + rest.split(':').filter(Boolean).slice(0, 2).join(':');
     return kind + (rest ? ':' + rest.slice(0, 12) : '');
   }
@@ -4399,13 +4405,13 @@ body {
       });
     });
 
-    // Auto-expand: agents active < 1h if not already set
+    // Auto-expand: only set initial state once — never overwrite user's toggle
     groupList.forEach(g => {
-      const lastActive = Math.max(
-        g.main ? (g.main.updatedAt || 0) : 0,
-        ...g.children.map(c => c.updatedAt || 0)
-      );
       if (!(g.name in treeCollapsed)) {
+        const lastActive = Math.max(
+          g.main ? (g.main.updatedAt || 0) : 0,
+          ...g.children.map(c => c.updatedAt || 0)
+        );
         treeCollapsed[g.name] = (now - lastActive) >= 3600000; // collapsed if inactive > 1h
       }
     });
@@ -4473,7 +4479,7 @@ body {
       const childrenHtml = g.children.map((c, i) => {
         const isLast = i === g.children.length - 1;
         const connector = isLast ? '\u2514\u2500' : '\u251c\u2500';
-        const label = treeChildLabel(c._parsed?.kind || '', c._parsed?.rest || '');
+        const label = treeChildLabel(c._parsed?.kind || '', c._parsed?.rest || '', c.label || '');
         const cModel = ocFmtModel(c.model || '-');
         const cTok = ocFmtTokens(c.totalTokens || 0);
         const cCost = '$' + (c.cost || 0).toFixed(2);
