@@ -2143,6 +2143,55 @@ function collectTimelineEvents() {
 }
 // ── End Activity Timeline ─────────────────────────────────────────────────────
 
+// ── ACC — Agent Command Center ────────────────────────────────────────────────
+function getAccSessions() {
+  const dbPath = path.join(os.homedir(), '.acc', 'db');
+  try {
+    if (!fs.existsSync(dbPath)) {
+      return { sessions: [], stats: { total: 0, running: 0, idle: 0, error: 0, crashed: 0, token_in_today: 0, token_out_today: 0 } };
+    }
+    const Database = require('/Users/alex/projects/agent-command-center/node_modules/better-sqlite3');
+    const db = new Database(dbPath, { readonly: true });
+    const sessions = db.prepare('SELECT * FROM sessions ORDER BY last_active DESC').all();
+    const todayStart = new Date();
+    todayStart.setUTCHours(0, 0, 0, 0);
+    const todayTs = todayStart.getTime();
+    const todaySessions = sessions.filter(s => (s.last_active || 0) >= todayTs);
+    const token_in_today = todaySessions.reduce((sum, s) => sum + (s.token_in || 0), 0);
+    const token_out_today = todaySessions.reduce((sum, s) => sum + (s.token_out || 0), 0);
+    const stats = {
+      total: sessions.length,
+      running: sessions.filter(s => s.status === 'running').length,
+      idle: sessions.filter(s => s.status === 'idle').length,
+      error: sessions.filter(s => s.status === 'error').length,
+      crashed: sessions.filter(s => s.status === 'crashed').length,
+      token_in_today,
+      token_out_today,
+    };
+    db.close();
+    return { sessions, stats };
+  } catch (e) {
+    console.error('ACC sessions error:', e.message);
+    return { sessions: [], stats: { total: 0, running: 0, idle: 0, error: 0, crashed: 0, token_in_today: 0, token_out_today: 0 } };
+  }
+}
+
+function getAccEvents(sessionId, limit) {
+  const dbPath = path.join(os.homedir(), '.acc', 'db');
+  try {
+    if (!fs.existsSync(dbPath)) return { events: [] };
+    const Database = require('/Users/alex/projects/agent-command-center/node_modules/better-sqlite3');
+    const db = new Database(dbPath, { readonly: true });
+    const events = db.prepare('SELECT * FROM events WHERE session_id = ? ORDER BY ts ASC LIMIT ?').all(sessionId, limit || 100);
+    db.close();
+    return { events };
+  } catch (e) {
+    console.error('ACC events error:', e.message);
+    return { events: [] };
+  }
+}
+// ── End ACC ───────────────────────────────────────────────────────────────────
+
 const server = http.createServer((req, res) => {
   if (!httpsEnforcement(req, res)) return;
   setSecurityHeaders(res);
@@ -3664,6 +3713,23 @@ const server = http.createServer((req, res) => {
       
       return;
     }
+  }
+
+  if (req.url === '/api/acc/sessions') {
+    const data = getAccSessions();
+    res.writeHead(200, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify(data));
+    return;
+  }
+
+  if (req.url.startsWith('/api/acc/events')) {
+    const urlObj = new URL(req.url, 'http://localhost');
+    const sessionId = urlObj.searchParams.get('session') || '';
+    const limit = parseInt(urlObj.searchParams.get('limit')) || 100;
+    const data = getAccEvents(sessionId, limit);
+    res.writeHead(200, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify(data));
+    return;
   }
 
   try {
