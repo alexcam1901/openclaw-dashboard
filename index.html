@@ -3705,6 +3705,54 @@ body {
 }
 #acc .acc-tab:hover { color: var(--text-primary); }
 #acc .acc-tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+#acc .tree-group { margin-bottom: 12px; }
+#acc .tree-parent {
+  display: grid;
+  grid-template-columns: minmax(0,1fr) minmax(0,1fr) minmax(0,1fr) minmax(0,1fr) minmax(0,1fr) minmax(0,1fr);
+  gap: 8px;
+  padding: 10px 14px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  cursor: pointer;
+  align-items: center;
+  font-size: 13px;
+  transition: background 0.15s;
+  user-select: none;
+}
+#acc .tree-parent:hover { background: rgba(99,102,241,0.08); }
+#acc .tree-parent.expanded { border-bottom-left-radius: 0; border-bottom-right-radius: 0; border-bottom-color: transparent; }
+#acc .tree-parent-name { font-weight: 700; font-size: 14px; display: flex; align-items: center; gap: 8px; }
+#acc .tree-toggle { font-size: 10px; color: var(--text-muted); width: 14px; }
+#acc .tree-children {
+  border: 1px solid var(--border);
+  border-top: none;
+  border-radius: 0 0 8px 8px;
+  overflow: hidden;
+  margin-bottom: 0;
+}
+#acc .tree-child {
+  display: grid;
+  grid-template-columns: minmax(0,1fr) minmax(0,1fr) minmax(0,1fr) minmax(0,1fr) minmax(0,1fr) minmax(0,1fr);
+  gap: 8px;
+  padding: 7px 14px 7px 32px;
+  border-bottom: 1px solid var(--border);
+  font-size: 12px;
+  align-items: center;
+}
+#acc .tree-child:last-child { border-bottom: none; }
+#acc .tree-child:hover { background: rgba(99,102,241,0.05); }
+#acc .tree-connector { font-family: monospace; color: var(--text-muted); margin-right: 6px; }
+#acc .tree-child-key { display: flex; align-items: center; overflow: hidden; }
+#acc .tree-child-label { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-family: monospace; font-size: 11px; }
+#acc .tree-status-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; margin-right: 4px; flex-shrink: 0; }
+#acc .tree-status-dot.active { background: var(--green); box-shadow: 0 0 4px var(--green); }
+#acc .tree-status-dot.recent { background: var(--yellow); }
+#acc .tree-status-dot.idle { background: var(--text-muted); }
+#acc .tree-search-bar { display: flex; gap: 10px; align-items: center; margin-bottom: 16px; }
+#acc .tree-search-bar input { flex: 1; padding: 7px 12px; background: var(--bg-secondary); border: 1px solid var(--border); border-radius: 6px; color: var(--text-primary); font-size: 13px; }
+#acc .tree-meta { font-size: 11px; color: var(--text-muted); }
+#acc .tree-lastmsg { color: var(--text-muted); font-size: 11px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 #acc .oc-filter-bar {
   display: flex;
   align-items: center;
@@ -3802,11 +3850,18 @@ body {
       <span class="acc-stat">⚡ <span class="val" id="oc-stat-recent">0</span> active 1h</span>
       <span class="acc-stat">🤖 <span class="val" id="oc-stat-top-model">-</span> top model</span>
     </div>
+    <div id="acc-stats-tree" style="display:none;gap:24px;align-items:center;flex-wrap:wrap;">
+      <span class="acc-stat">🤖 <span class="val" id="tree-stat-agents">0</span> agents</span>
+      <span class="acc-stat">🔀 <span class="val" id="tree-stat-subagents">0</span> subagents</span>
+      <span class="acc-stat">🟢 <span class="val" id="tree-stat-active">0</span> active</span>
+      <span class="acc-stat">💰 <span class="val" id="tree-stat-cost">$0.00</span> total cost</span>
+    </div>
   </div>
 
   <div class="acc-tabs">
     <div class="acc-tab active" data-tab="acc" onclick="accSwitchTab('acc')">🎯 ACC Sessions</div>
     <div class="acc-tab" data-tab="openclaw" onclick="accSwitchTab('openclaw')">⚡ OpenClaw Sessions</div>
+    <div class="acc-tab" data-tab="tree" onclick="accSwitchTab('tree')">🌳 Agent Tree</div>
   </div>
 
   <div id="acc-tab-acc" class="acc-tab-content">
@@ -3833,6 +3888,16 @@ body {
           <div class="acc-empty">Select a session to view events</div>
         </div>
       </div>
+    </div>
+  </div>
+
+  <div id="acc-tab-tree" class="acc-tab-content" style="display:none;">
+    <div class="tree-search-bar">
+      <input type="text" id="tree-search" placeholder="🔍 search agents..." oninput="treeApplyFilter()">
+      <button class="btn" style="background:var(--bg-secondary);color:var(--text-primary);border:1px solid var(--border);padding:7px 14px;border-radius:6px;cursor:pointer;font-size:13px;" onclick="treeFetchSessions()">🔄 Refresh</button>
+    </div>
+    <div id="tree-container">
+      <div class="acc-empty">Loading...</div>
     </div>
   </div>
 
@@ -4034,6 +4099,7 @@ body {
       if (!page?.classList.contains('active')) return;
       const activeTab = page.querySelector('.acc-tab.active')?.dataset?.tab;
       if (activeTab === 'openclaw') ocFetchSessions();
+      if (activeTab === 'tree') treeFetchSessions();
     }, 30000);
   };
 
@@ -4049,10 +4115,14 @@ body {
     });
     document.getElementById('acc-tab-acc').style.display = tab === 'acc' ? '' : 'none';
     document.getElementById('acc-tab-openclaw').style.display = tab === 'openclaw' ? '' : 'none';
+    document.getElementById('acc-tab-tree').style.display = tab === 'tree' ? '' : 'none';
     document.getElementById('acc-stats-acc').style.display = tab === 'acc' ? 'flex' : 'none';
     document.getElementById('acc-stats-oc').style.display = tab === 'openclaw' ? 'flex' : 'none';
+    document.getElementById('acc-stats-tree').style.display = tab === 'tree' ? 'flex' : 'none';
     if (tab === 'openclaw') {
       ocFetchSessions();
+    } else if (tab === 'tree') {
+      treeFetchSessions();
     } else {
       accFetchSessions();
     }
@@ -4230,6 +4300,204 @@ body {
     if (secs < 86400) return Math.floor(secs / 3600) + 'h ago';
     return Math.floor(secs / 86400) + 'd ago';
   }
+
+  // ── Agent Tree ───────────────────────────────────────────────────────────────
+  let treeSessionsAll = [];
+  let treeCollapsed = {}; // agentName → bool
+  let treeSearch = '';
+
+  function treeParseKey(key) {
+    const parts = key.split(':');
+    if (parts[0] !== 'agent' || parts.length < 3) return null;
+    const name = parts[1];
+    const kind = parts[2];
+    const rest = parts.slice(3).join(':');
+    return { name, kind, rest, isParent: kind === 'main' };
+  }
+
+  function treeChildLabel(kind, rest) {
+    if (kind === 'subagent') return 'subagent:' + rest.slice(0, 8);
+    if (kind === 'cron' && rest.includes(':run')) return '\u21b3 run:' + rest.split(':')[0].slice(0, 8);
+    if (kind === 'cron') return 'cron:' + rest.slice(0, 8);
+    if (kind === 'telegram') return 'telegram:' + rest.split(':').filter(Boolean).slice(0, 2).join(':');
+    return kind + (rest ? ':' + rest.slice(0, 12) : '');
+  }
+
+  window.treeFetchSessions = async function() {
+    try {
+      const r = await authFetch(API_BASE + '/api/acc/openclaw-sessions');
+      const data = await r.json();
+      treeSessionsAll = data.sessions || [];
+      treeApplyFilter();
+    } catch (e) {
+      document.getElementById('tree-container').innerHTML =
+        '<div class="acc-empty" style="color:var(--red);">Error: ' + accEsc(String(e.message || e)) + '</div>';
+    }
+  };
+
+  window.treeApplyFilter = function() {
+    treeSearch = (document.getElementById('tree-search')?.value || '').toLowerCase();
+    treeRender(treeSessionsAll, treeSearch);
+  };
+
+  window.treeToggle = function(agentName) {
+    treeCollapsed[agentName] = !treeCollapsed[agentName];
+    treeRender(treeSessionsAll, treeSearch);
+  };
+
+  function treeRender(sessions, search) {
+    const container = document.getElementById('tree-container');
+    if (!sessions || sessions.length === 0) {
+      container.innerHTML = '<div class="acc-empty">No sessions found</div>';
+      return;
+    }
+
+    // Parse all keys, group by agent name
+    const groups = new Map(); // name → { main: session|null, children: session[] }
+    for (const s of sessions) {
+      const parsed = treeParseKey(s.key || '');
+      if (!parsed) continue;
+      if (!groups.has(parsed.name)) groups.set(parsed.name, { name: parsed.name, main: null, children: [] });
+      const g = groups.get(parsed.name);
+      if (parsed.isParent) {
+        g.main = s;
+      } else {
+        g.children.push({ ...s, _parsed: parsed });
+      }
+    }
+
+    // Filter by search
+    const now = Date.now();
+    let groupList = [...groups.values()].filter(g => {
+      if (!search) return true;
+      if (g.name.toLowerCase().includes(search)) return true;
+      if (g.main && (g.main.key || '').toLowerCase().includes(search)) return true;
+      return g.children.some(c => (c.key || '').toLowerCase().includes(search));
+    });
+
+    // Sort groups: most recently active first
+    groupList.sort((a, b) => {
+      const aTime = Math.max(
+        a.main ? (a.main.updatedAt || 0) : 0,
+        ...a.children.map(c => c.updatedAt || 0)
+      );
+      const bTime = Math.max(
+        b.main ? (b.main.updatedAt || 0) : 0,
+        ...b.children.map(c => c.updatedAt || 0)
+      );
+      return bTime - aTime;
+    });
+
+    // Sort children within each group
+    groupList.forEach(g => {
+      g.children.sort((a, b) => {
+        const kindOrder = { subagent: 0, cron: 1, telegram: 2 };
+        const ao = kindOrder[a._parsed?.kind] ?? 3;
+        const bo = kindOrder[b._parsed?.kind] ?? 3;
+        if (ao !== bo) return ao - bo;
+        return (b.updatedAt || 0) - (a.updatedAt || 0);
+      });
+    });
+
+    // Auto-expand: agents active < 1h if not already set
+    groupList.forEach(g => {
+      const lastActive = Math.max(
+        g.main ? (g.main.updatedAt || 0) : 0,
+        ...g.children.map(c => c.updatedAt || 0)
+      );
+      if (!(g.name in treeCollapsed)) {
+        treeCollapsed[g.name] = (now - lastActive) >= 3600000; // collapsed if inactive > 1h
+      }
+    });
+
+    // Compute stats
+    let totalAgents = groupList.length;
+    let totalSubagents = 0;
+    let totalActive = 0;
+    let totalCost = 0;
+    groupList.forEach(g => {
+      totalSubagents += g.children.filter(c => c._parsed?.kind === 'subagent').length;
+      const lastActive = Math.max(
+        g.main ? (g.main.updatedAt || 0) : 0,
+        ...g.children.map(c => c.updatedAt || 0)
+      );
+      if (now - lastActive < 300000) totalActive++;
+      if (g.main) totalCost += g.main.cost || 0;
+      g.children.forEach(c => { totalCost += c.cost || 0; });
+    });
+    document.getElementById('tree-stat-agents').textContent = totalAgents;
+    document.getElementById('tree-stat-subagents').textContent = totalSubagents;
+    document.getElementById('tree-stat-active').textContent = totalActive;
+    document.getElementById('tree-stat-cost').textContent = '$' + totalCost.toFixed(2);
+
+    // Render
+    const html = groupList.map(g => {
+      const collapsed = treeCollapsed[g.name];
+      const escapedName = accEsc(g.name);
+
+      // Aggregate totals
+      let totalTokens = g.main ? (g.main.totalTokens || 0) : 0;
+      let groupCost = g.main ? (g.main.cost || 0) : 0;
+      let lastActiveTs = g.main ? (g.main.updatedAt || 0) : 0;
+      g.children.forEach(c => {
+        totalTokens += c.totalTokens || 0;
+        groupCost += c.cost || 0;
+        if ((c.updatedAt || 0) > lastActiveTs) lastActiveTs = c.updatedAt || 0;
+      });
+
+      // Status dot
+      const ageDiff = now - lastActiveTs;
+      const dotCls = ageDiff < 300000 ? 'active' : ageDiff < 3600000 ? 'recent' : 'idle';
+
+      const model = g.main ? ocFmtModel(g.main.model || '-') : '-';
+      const tokStr = ocFmtTokens(totalTokens);
+      const costStr = '$' + groupCost.toFixed(2);
+      const timeStr = ocRelTime(lastActiveTs);
+      const toggleIcon = collapsed ? '▶' : '▼';
+      const expandedCls = collapsed ? '' : ' expanded';
+
+      const parentHtml = '<div class="tree-parent' + expandedCls + '" onclick="treeToggle(' + JSON.stringify(g.name) + ')">' +
+        '<div class="tree-parent-name"><span class="tree-toggle">' + toggleIcon + '</span>' +
+        '<span class="tree-status-dot ' + dotCls + '"></span>' + escapedName + '</div>' +
+        '<div class="tree-meta">' + accEsc(model) + '</div>' +
+        '<div class="tree-meta">' + tokStr + '</div>' +
+        '<div class="tree-meta">' + costStr + '</div>' +
+        '<div class="tree-meta">' + timeStr + '</div>' +
+        '<div></div>' +
+        '</div>';
+
+      if (collapsed || g.children.length === 0) {
+        return '<div class="tree-group">' + parentHtml + '</div>';
+      }
+
+      const childrenHtml = g.children.map((c, i) => {
+        const isLast = i === g.children.length - 1;
+        const connector = isLast ? '\u2514\u2500' : '\u251c\u2500';
+        const label = treeChildLabel(c._parsed?.kind || '', c._parsed?.rest || '');
+        const cModel = ocFmtModel(c.model || '-');
+        const cTok = ocFmtTokens(c.totalTokens || 0);
+        const cCost = '$' + (c.cost || 0).toFixed(2);
+        const cTime = ocRelTime(c.updatedAt);
+        const cMsg = accEsc((c.lastMessage || '').slice(0, 60));
+        return '<div class="tree-child">' +
+          '<div class="tree-child-key"><span class="tree-connector">' + connector + '</span>' +
+          '<span class="tree-child-label" title="' + accEsc(c.key || '') + '">' + accEsc(label) + '</span></div>' +
+          '<div class="tree-meta">' + accEsc(cModel) + '</div>' +
+          '<div class="tree-meta">' + cTok + '</div>' +
+          '<div class="tree-meta">' + cCost + '</div>' +
+          '<div class="tree-meta">' + cTime + '</div>' +
+          '<div class="tree-lastmsg">' + cMsg + '</div>' +
+          '</div>';
+      }).join('');
+
+      return '<div class="tree-group">' + parentHtml +
+        '<div class="tree-children">' + childrenHtml + '</div>' +
+        '</div>';
+    }).join('');
+
+    container.innerHTML = html || '<div class="acc-empty">No agents found</div>';
+  }
+
 })();
 </script>
 </body>
