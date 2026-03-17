@@ -3687,6 +3687,75 @@ body {
 #acc .acc-empty { color: var(--text-muted); font-size: 13px; padding: 24px; text-align: center; }
 #acc .acc-session-info { padding: 10px 12px; border-bottom: 1px solid var(--border); font-size: 12px; color: var(--text-secondary); }
 #acc .acc-session-info strong { color: var(--text-primary); }
+#acc .acc-tabs {
+  display: flex;
+  gap: 0;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 20px;
+}
+#acc .acc-tab {
+  padding: 10px 20px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  color: var(--text-secondary);
+  border-bottom: 2px solid transparent;
+  transition: all 0.2s;
+  margin-bottom: -1px;
+}
+#acc .acc-tab:hover { color: var(--text-primary); }
+#acc .acc-tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+#acc .oc-filter-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 12px;
+  flex-wrap: wrap;
+}
+#acc .oc-filter-bar select,
+#acc .oc-filter-bar input {
+  padding: 7px 12px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text-primary);
+  font-size: 13px;
+}
+#acc .oc-filter-bar input { flex: 1; min-width: 160px; }
+#acc .oc-count { font-size: 12px; color: var(--text-muted); margin-left: auto; }
+#acc .oc-header {
+  display: grid;
+  grid-template-columns: minmax(0,3fr) minmax(0,1.2fr) minmax(0,1fr) minmax(0,1fr) minmax(0,0.8fr) minmax(0,1fr) minmax(0,2fr);
+  gap: 6px;
+  padding: 8px 12px;
+  background: var(--bg-secondary);
+  border-radius: 6px 6px 0 0;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  letter-spacing: 0.5px;
+}
+#acc .oc-row {
+  display: grid;
+  grid-template-columns: minmax(0,3fr) minmax(0,1.2fr) minmax(0,1fr) minmax(0,1fr) minmax(0,0.8fr) minmax(0,1fr) minmax(0,2fr);
+  gap: 6px;
+  padding: 9px 12px;
+  border-bottom: 1px solid var(--border);
+  font-size: 13px;
+  transition: background 0.15s;
+}
+#acc .oc-row:hover { background: rgba(99,102,241,0.07); }
+#acc .oc-row:last-child { border-bottom: none; }
+#acc .oc-cell { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--text-primary); }
+#acc .oc-cell.mono { font-family: 'JetBrains Mono', monospace; font-size: 12px; }
+#acc .oc-cell.muted { color: var(--text-secondary); font-size: 12px; }
+#acc .oc-cell.red { color: var(--red); }
+#acc .oc-badge { display: inline-block; padding: 2px 7px; border-radius: 4px; font-size: 11px; font-weight: 600; }
+#acc .oc-badge.webchat  { background: rgba(139,92,246,0.15); color: #a78bfa; }
+#acc .oc-badge.telegram { background: rgba(59,130,246,0.15); color: #60a5fa; }
+#acc .oc-badge.discord  { background: rgba(99,102,241,0.15); color: var(--accent); }
+#acc .oc-badge.none     { background: rgba(100,116,139,0.13); color: var(--text-muted); }
 </style>
 
 <div class="page" id="acc">
@@ -3699,35 +3768,79 @@ body {
   </div>
 
   <div class="acc-stats-bar" id="acc-stats-bar">
-    <span class="acc-stat">🟢 <span class="val" id="acc-stat-running">0</span> running</span>
-    <span class="acc-stat">⚪ <span class="val" id="acc-stat-idle">0</span> idle</span>
-    <span class="acc-stat">🔴 <span class="val" id="acc-stat-crashed">0</span> crashed</span>
-    <span class="acc-stat">⚠️ <span class="val" id="acc-stat-error">0</span> error</span>
-    <span class="acc-stat">📥 <span class="val" id="acc-stat-tok-in">0</span> in today</span>
-    <span class="acc-stat">📤 <span class="val" id="acc-stat-tok-out">0</span> out today</span>
+    <div id="acc-stats-acc" style="display:flex;gap:24px;align-items:center;flex-wrap:wrap;">
+      <span class="acc-stat">🟢 <span class="val" id="acc-stat-running">0</span> running</span>
+      <span class="acc-stat">⚪ <span class="val" id="acc-stat-idle">0</span> idle</span>
+      <span class="acc-stat">🔴 <span class="val" id="acc-stat-crashed">0</span> crashed</span>
+      <span class="acc-stat">⚠️ <span class="val" id="acc-stat-error">0</span> error</span>
+      <span class="acc-stat">📥 <span class="val" id="acc-stat-tok-in">0</span> in today</span>
+      <span class="acc-stat">📤 <span class="val" id="acc-stat-tok-out">0</span> out today</span>
+    </div>
+    <div id="acc-stats-oc" style="display:none;gap:24px;align-items:center;flex-wrap:wrap;">
+      <span class="acc-stat">📊 <span class="val" id="oc-stat-total">0</span> sessions</span>
+      <span class="acc-stat">💰 <span class="val" id="oc-stat-cost">$0.00</span> total cost</span>
+      <span class="acc-stat">⚡ <span class="val" id="oc-stat-recent">0</span> active 1h</span>
+      <span class="acc-stat">🤖 <span class="val" id="oc-stat-top-model">-</span> top model</span>
+    </div>
   </div>
 
-  <div class="acc-layout">
-    <div class="card" style="padding:0; overflow:hidden;">
-      <div style="padding:12px 14px; border-bottom:1px solid var(--border); font-weight:600; font-size:13px; color:var(--text-secondary);">Sessions</div>
-      <div class="acc-sessions-header">
-        <div>Name</div>
-        <div>Agent</div>
-        <div>Status</div>
-        <div>Tokens</div>
-        <div>Ctx%</div>
-        <div>Uptime</div>
-        <div>Last Active</div>
+  <div class="acc-tabs">
+    <div class="acc-tab active" data-tab="acc" onclick="accSwitchTab('acc')">🎯 ACC Sessions</div>
+    <div class="acc-tab" data-tab="openclaw" onclick="accSwitchTab('openclaw')">⚡ OpenClaw Sessions</div>
+  </div>
+
+  <div id="acc-tab-acc" class="acc-tab-content">
+    <div class="acc-layout">
+      <div class="card" style="padding:0; overflow:hidden;">
+        <div style="padding:12px 14px; border-bottom:1px solid var(--border); font-weight:600; font-size:13px; color:var(--text-secondary);">Sessions</div>
+        <div class="acc-sessions-header">
+          <div>Name</div>
+          <div>Agent</div>
+          <div>Status</div>
+          <div>Tokens</div>
+          <div>Ctx%</div>
+          <div>Uptime</div>
+          <div>Last Active</div>
+        </div>
+        <div id="acc-sessions-list">
+          <div class="acc-empty">Loading...</div>
+        </div>
       </div>
-      <div id="acc-sessions-list">
-        <div class="acc-empty">Loading...</div>
+
+      <div class="card" style="padding:0; overflow:hidden;">
+        <div style="padding:12px 14px; border-bottom:1px solid var(--border); font-weight:600; font-size:13px; color:var(--text-secondary);">Event Log</div>
+        <div id="acc-events-panel">
+          <div class="acc-empty">Select a session to view events</div>
+        </div>
       </div>
     </div>
+  </div>
 
+  <div id="acc-tab-openclaw" class="acc-tab-content" style="display:none;">
+    <div class="oc-filter-bar">
+      <select id="oc-filter-select" onchange="ocApplyFilter()">
+        <option value="all">All</option>
+        <option value="active">Active</option>
+        <option value="agents">Agents</option>
+        <option value="crons">Crons</option>
+        <option value="subagents">Subagents</option>
+      </select>
+      <input type="text" id="oc-search" placeholder="🔍 search..." oninput="ocApplyFilter()">
+      <span class="oc-count" id="oc-count"></span>
+      <button class="btn" style="background:var(--bg-secondary);color:var(--text-primary);border:1px solid var(--border);padding:7px 14px;border-radius:6px;cursor:pointer;font-size:13px;" onclick="ocFetchSessions()">🔄 Refresh</button>
+    </div>
     <div class="card" style="padding:0; overflow:hidden;">
-      <div style="padding:12px 14px; border-bottom:1px solid var(--border); font-weight:600; font-size:13px; color:var(--text-secondary);">Event Log</div>
-      <div id="acc-events-panel">
-        <div class="acc-empty">Select a session to view events</div>
+      <div class="oc-header">
+        <div>Key</div>
+        <div>Model</div>
+        <div>Channel</div>
+        <div>Tokens</div>
+        <div>Cost</div>
+        <div>Updated</div>
+        <div>Last Message</div>
+      </div>
+      <div id="oc-sessions-list">
+        <div class="acc-empty">Loading...</div>
       </div>
     </div>
   </div>
@@ -3893,15 +4006,140 @@ body {
   window.accStartAutoRefresh = function() {
     accStopAutoRefresh();
     accRefreshTimer = setInterval(() => {
-      if (document.getElementById('acc')?.classList.contains('active')) {
-        accFetchSessions();
-      }
+      const page = document.getElementById('acc');
+      if (!page?.classList.contains('active')) return;
+      const activeTab = page.querySelector('.acc-tab.active')?.dataset?.tab;
+      if (!activeTab || activeTab === 'acc') accFetchSessions();
     }, 10000);
+    ocRefreshTimer = setInterval(() => {
+      const page = document.getElementById('acc');
+      if (!page?.classList.contains('active')) return;
+      const activeTab = page.querySelector('.acc-tab.active')?.dataset?.tab;
+      if (activeTab === 'openclaw') ocFetchSessions();
+    }, 30000);
   };
 
   window.accStopAutoRefresh = function() {
     if (accRefreshTimer) { clearInterval(accRefreshTimer); accRefreshTimer = null; }
+    if (ocRefreshTimer) { clearInterval(ocRefreshTimer); ocRefreshTimer = null; }
   };
+
+  // ── Tab switching ────────────────────────────────────────────────────────────
+  window.accSwitchTab = function(tab) {
+    document.querySelectorAll('#acc .acc-tab').forEach(t => {
+      t.classList.toggle('active', t.dataset.tab === tab);
+    });
+    document.getElementById('acc-tab-acc').style.display = tab === 'acc' ? '' : 'none';
+    document.getElementById('acc-tab-openclaw').style.display = tab === 'openclaw' ? '' : 'none';
+    document.getElementById('acc-stats-acc').style.display = tab === 'acc' ? 'flex' : 'none';
+    document.getElementById('acc-stats-oc').style.display = tab === 'openclaw' ? 'flex' : 'none';
+    if (tab === 'openclaw') {
+      ocFetchSessions();
+    } else {
+      accFetchSessions();
+    }
+  };
+
+  // ── OpenClaw Sessions ────────────────────────────────────────────────────────
+  let ocSessionsAll = [];
+  let ocRefreshTimer = null;
+
+  window.ocFetchSessions = async function() {
+    try {
+      const r = await authFetch(API_BASE + '/api/acc/openclaw-sessions');
+      const data = await r.json();
+      ocSessionsAll = data.sessions || [];
+      ocRenderStats(data.stats || {});
+      ocApplyFilter();
+    } catch (e) {
+      document.getElementById('oc-sessions-list').innerHTML =
+        '<div class="acc-empty" style="color:var(--red);">Error: ' + accEsc(String(e.message || e)) + '</div>';
+    }
+  };
+
+  function ocRenderStats(stats) {
+    document.getElementById('oc-stat-total').textContent = stats.withTokens || 0;
+    document.getElementById('oc-stat-cost').textContent = ocFmtCost(stats.totalCost || 0);
+    document.getElementById('oc-stat-recent').textContent = stats.recentHour || 0;
+    document.getElementById('oc-stat-top-model').textContent = ocFmtModel(stats.topModel || '-');
+  }
+
+  window.ocApplyFilter = function() {
+    const filter = document.getElementById('oc-filter-select')?.value || 'all';
+    const search = (document.getElementById('oc-search')?.value || '').toLowerCase();
+    const filtered = ocSessionsAll.filter(s => {
+      const key = s.key || '';
+      if (filter === 'active' && Date.now() - (s.updatedAt || 0) >= 3600000) return false;
+      if (filter === 'agents' && !/^agent:[^:]+:main$/.test(key)) return false;
+      if (filter === 'crons' && !key.includes(':cron:')) return false;
+      if (filter === 'subagents' && !key.includes(':subagent:')) return false;
+      if (search && !key.toLowerCase().includes(search)) return false;
+      return true;
+    });
+    const countEl = document.getElementById('oc-count');
+    if (countEl) countEl.textContent = 'Showing ' + filtered.length + ' of ' + ocSessionsAll.length + ' sessions';
+    ocRenderTable(filtered);
+  };
+
+  function ocRenderTable(sessions) {
+    const el = document.getElementById('oc-sessions-list');
+    if (!sessions || sessions.length === 0) {
+      el.innerHTML = '<div class="acc-empty">No sessions found</div>';
+      return;
+    }
+    el.innerHTML = sessions.map(s => {
+      const key = s.key || '';
+      const keyDisplay = key.length > 45 ? key.slice(0, 45) + '\u2026' : key;
+      const model = ocFmtModel(s.model || '-');
+      const channel = (s.channel || '-').toLowerCase();
+      const channelBadgeCls = { webchat: 'webchat', telegram: 'telegram', discord: 'discord' }[channel] || 'none';
+      const channelHtml = channel !== '-'
+        ? '<span class="oc-badge ' + channelBadgeCls + '">' + accEsc(channel) + '</span>'
+        : '<span style="color:var(--text-muted)">-</span>';
+      const tokens = ocFmtTokens(s.totalTokens || 0);
+      const tokRed = (s.totalTokens || 0) > 500000 ? ' red' : '';
+      const cost = ocFmtCost(s.cost || 0);
+      const costRed = (s.cost || 0) > 5 ? ' red' : '';
+      const updated = ocRelTime(s.updatedAt);
+      const lastMsg = accEsc((s.lastMessage || '').slice(0, 80));
+      return '<div class="oc-row">' +
+        '<div class="oc-cell mono" title="' + accEsc(key) + '">' + accEsc(keyDisplay) + '</div>' +
+        '<div class="oc-cell muted">' + accEsc(model) + '</div>' +
+        '<div class="oc-cell">' + channelHtml + '</div>' +
+        '<div class="oc-cell muted' + tokRed + '">' + tokens + '</div>' +
+        '<div class="oc-cell muted' + costRed + '">' + cost + '</div>' +
+        '<div class="oc-cell muted">' + updated + '</div>' +
+        '<div class="oc-cell muted">' + lastMsg + '</div>' +
+        '</div>';
+    }).join('');
+  }
+
+  function ocFmtModel(model) {
+    if (!model || model === '-' || model === 'unknown/unknown') return '-';
+    const last = model.split('/').pop();
+    return last.replace(/^claude-/, '');
+  }
+
+  function ocFmtTokens(n) {
+    if (!n) return '0';
+    if (n >= 1000000) return (n / 1000000).toFixed(1) + 'M';
+    if (n >= 1000) return Math.round(n / 1000) + 'k';
+    return String(n);
+  }
+
+  function ocFmtCost(n) {
+    return '$' + (n || 0).toFixed(2);
+  }
+
+  function ocRelTime(ts) {
+    if (!ts) return '-';
+    const secs = Math.floor((Date.now() - ts) / 1000);
+    if (secs < 5) return 'just now';
+    if (secs < 60) return secs + 's ago';
+    if (secs < 3600) return Math.floor(secs / 60) + 'm ago';
+    if (secs < 86400) return Math.floor(secs / 3600) + 'h ago';
+    return Math.floor(secs / 86400) + 'd ago';
+  }
 })();
 </script>
 </body>

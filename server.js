@@ -3722,6 +3722,30 @@ const server = http.createServer((req, res) => {
     return;
   }
 
+  if (req.url === '/api/acc/openclaw-sessions') {
+    try {
+      const sessions = getSessionsJson();
+      sessions.sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0));
+      const stats = {
+        total: sessions.length,
+        withTokens: sessions.filter(s => s.totalTokens > 0).length,
+        recentHour: sessions.filter(s => Date.now() - (s.updatedAt || 0) < 3600000).length,
+        totalCost: sessions.reduce((sum, s) => sum + (s.cost || 0), 0),
+        topModel: (() => {
+          const counts = {};
+          sessions.forEach(s => { if (s.model) counts[s.model] = (counts[s.model] || 0) + 1; });
+          return Object.entries(counts).sort((a, b) => b[1] - a[1])[0]?.[0] || '-';
+        })()
+      };
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ sessions, stats }));
+    } catch (e) {
+      res.writeHead(500, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ sessions: [], stats: {}, error: e.message }));
+    }
+    return;
+  }
+
   if (req.url.startsWith('/api/acc/events')) {
     const urlObj = new URL(req.url, 'http://localhost');
     const sessionId = urlObj.searchParams.get('session') || '';
