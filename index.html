@@ -2617,6 +2617,10 @@ body {
         <span class="icon">🕐</span>
         <span class="nav-text">Timeline</span>
       </div>
+      <div class="nav-item" data-page="acc">
+        <span class="icon">🎯</span>
+        <span class="nav-text">ACC</span>
+      </div>
     </nav>
   </aside>
 
@@ -3588,6 +3592,1173 @@ body {
       </div>
     </div>
 
+<!-- ── ACC Page ─────────────────────────────────────────────────────────────── -->
+<style>
+#acc .acc-stats-bar {
+  display: flex;
+  gap: 24px;
+  align-items: center;
+  flex-wrap: wrap;
+  padding: 12px 16px;
+  background: var(--bg-card);
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  margin-bottom: 16px;
+}
+#acc .acc-stat {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+#acc .acc-stat .val { font-weight: 600; color: var(--text-primary); }
+#acc .acc-layout {
+  display: grid;
+  grid-template-columns: 55% 1fr;
+  gap: 16px;
+  align-items: start;
+  min-width: 0;
+}
+#acc .acc-layout > * {
+  min-width: 0;
+  overflow: hidden;
+}
+#acc .acc-sessions-header {
+  display: grid;
+  grid-template-columns: minmax(0,2fr) minmax(0,1fr) minmax(0,1.2fr) minmax(0,1.2fr) minmax(0,0.8fr) minmax(0,1fr) minmax(0,1.2fr);
+  gap: 6px;
+  padding: 8px 12px;
+  background: var(--bg-secondary);
+  border-radius: 6px 6px 0 0;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  letter-spacing: 0.5px;
+}
+#acc .acc-session-row {
+  display: grid;
+  grid-template-columns: minmax(0,2fr) minmax(0,1fr) minmax(0,1.2fr) minmax(0,1.2fr) minmax(0,0.8fr) minmax(0,1fr) minmax(0,1.2fr);
+  gap: 6px;
+  padding: 9px 12px;
+  border-bottom: 1px solid var(--border);
+  cursor: pointer;
+  font-size: 13px;
+  transition: background 0.15s;
+}
+#acc .acc-session-row:hover { background: rgba(99,102,241,0.07); }
+#acc .acc-session-row.selected { background: rgba(99,102,241,0.13); border-left: 3px solid var(--accent); }
+#acc .acc-session-row:last-child { border-bottom: none; }
+#acc .acc-cell { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--text-primary); }
+#acc .acc-cell.muted { color: var(--text-secondary); font-size: 12px; }
+#acc .acc-status { display: inline-block; padding: 2px 7px; border-radius: 4px; font-size: 11px; font-weight: 600; }
+#acc .acc-status.running  { background: rgba(16,185,129,0.15); color: var(--green); }
+#acc .acc-status.idle     { background: rgba(99,102,241,0.13); color: var(--accent); }
+#acc .acc-status.busy,
+#acc .acc-status.thinking { background: rgba(245,158,11,0.15); color: var(--yellow); }
+#acc .acc-status.error    { background: rgba(239,68,68,0.15);  color: var(--red); }
+#acc .acc-status.crashed  { background: rgba(239,68,68,0.15);  color: var(--red); }
+#acc .acc-status.closed   { background: rgba(100,116,139,0.13); color: var(--text-muted); }
+#acc .acc-events-wrap {
+  max-height: 60vh;
+  overflow-y: auto;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+#acc .acc-event {
+  font-size: 12px;
+  line-height: 1.5;
+  border-left: 3px solid var(--border);
+  padding: 4px 8px;
+}
+#acc .acc-event-header { display: flex; align-items: center; gap: 6px; color: var(--text-muted); margin-bottom: 2px; }
+#acc .acc-event-content { color: var(--text-primary); word-break: break-word; }
+#acc .ev-badge { display: inline-block; padding: 1px 6px; border-radius: 3px; font-size: 10px; font-weight: 700; text-transform: uppercase; }
+#acc .ev-reply       { background: rgba(59,130,246,0.15); color: #60a5fa; border: 1px solid rgba(59,130,246,0.3); }
+#acc .ev-tool_call   { background: rgba(245,158,11,0.15); color: var(--yellow); border: 1px solid rgba(245,158,11,0.3); }
+#acc .ev-tool_result { background: transparent; color: var(--yellow); border: 1px solid rgba(245,158,11,0.4); }
+#acc .ev-thinking    { background: rgba(139,92,246,0.15); color: #a78bfa; border: 1px solid rgba(139,92,246,0.3); }
+#acc .ev-error       { background: rgba(239,68,68,0.15); color: var(--red); border: 1px solid rgba(239,68,68,0.3); }
+#acc .ev-status_change { background: rgba(100,116,139,0.13); color: var(--text-muted); border: 1px solid var(--border); }
+#acc .ev-default     { background: rgba(100,116,139,0.1); color: var(--text-muted); border: 1px solid var(--border); }
+#acc .acc-empty { color: var(--text-muted); font-size: 13px; padding: 24px; text-align: center; }
+#acc .acc-session-info { padding: 10px 12px; border-bottom: 1px solid var(--border); font-size: 12px; color: var(--text-secondary); }
+#acc .acc-session-info strong { color: var(--text-primary); }
+#acc .acc-tabs {
+  display: flex;
+  gap: 0;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 20px;
+}
+#acc .acc-tab {
+  padding: 10px 20px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  color: var(--text-secondary);
+  border-bottom: 2px solid transparent;
+  transition: all 0.2s;
+  margin-bottom: -1px;
+}
+#acc .acc-tab:hover { color: var(--text-primary); }
+#acc .acc-tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+#acc .tree-group { margin-bottom: 12px; }
+#acc .tree-parent {
+  display: grid;
+  grid-template-columns: minmax(0,1fr) minmax(0,1fr) minmax(0,1fr) minmax(0,1fr) minmax(0,1fr) minmax(0,1fr);
+  gap: 8px;
+  padding: 10px 14px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  cursor: pointer;
+  align-items: center;
+  font-size: 13px;
+  transition: background 0.15s;
+  user-select: none;
+}
+#acc .tree-parent:hover { background: rgba(99,102,241,0.08); }
+#acc .tree-parent.expanded { border-bottom-left-radius: 0; border-bottom-right-radius: 0; border-bottom-color: transparent; }
+#acc .tree-parent-name { font-weight: 700; font-size: 14px; display: flex; align-items: center; gap: 8px; }
+#acc .tree-toggle { font-size: 10px; color: var(--text-muted); width: 14px; }
+#acc .tree-children {
+  border: 1px solid var(--border);
+  border-top: none;
+  border-radius: 0 0 8px 8px;
+  overflow: hidden;
+  margin-bottom: 0;
+}
+#acc .tree-child {
+  display: grid;
+  grid-template-columns: minmax(0,1fr) minmax(0,1fr) minmax(0,1fr) minmax(0,1fr) minmax(0,1fr) minmax(0,1fr);
+  gap: 8px;
+  padding: 7px 14px 7px 32px;
+  border-bottom: 1px solid var(--border);
+  font-size: 12px;
+  align-items: center;
+}
+#acc .tree-child:last-child { border-bottom: none; }
+#acc .tree-child:hover { background: rgba(99,102,241,0.05); }
+#acc .tree-connector { font-family: monospace; color: var(--text-muted); margin-right: 6px; }
+#acc .tree-child-key { display: flex; align-items: center; overflow: hidden; }
+#acc .tree-child-label { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-family: monospace; font-size: 11px; }
+#acc .tree-status-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; margin-right: 4px; flex-shrink: 0; }
+#acc .tree-status-dot.active { background: var(--green); box-shadow: 0 0 4px var(--green); }
+#acc .tree-status-dot.recent { background: var(--yellow); }
+#acc .tree-status-dot.idle { background: var(--text-muted); }
+#acc .tree-status-dot.running {
+  background: var(--green);
+  box-shadow: 0 0 6px var(--green);
+  animation: treePulse 1.4s ease-in-out infinite;
+}
+@keyframes treePulse {
+  0%   { box-shadow: 0 0 0 0 rgba(16,185,129,0.7); }
+  70%  { box-shadow: 0 0 0 6px rgba(16,185,129,0); }
+  100% { box-shadow: 0 0 0 0 rgba(16,185,129,0); }
+}
+#acc .tree-running-badge {
+  display: inline-block;
+  padding: 1px 7px;
+  border-radius: 10px;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  background: rgba(16,185,129,0.15);
+  color: var(--green);
+  border: 1px solid rgba(16,185,129,0.3);
+  margin-left: 6px;
+  vertical-align: middle;
+}
+#acc .tree-search-bar { display: flex; gap: 10px; align-items: center; margin-bottom: 16px; }
+#acc .tree-search-bar input { flex: 1; padding: 7px 12px; background: var(--bg-secondary); border: 1px solid var(--border); border-radius: 6px; color: var(--text-primary); font-size: 13px; }
+#acc .tree-meta { font-size: 11px; color: var(--text-muted); }
+#acc .tree-lastmsg { color: var(--text-muted); font-size: 11px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* ── Register tab ─────────────────────────────────────────────────────────── */
+#acc .reg-filter-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+}
+#acc .reg-filter-bar input {
+  flex: 1;
+  min-width: 160px;
+  padding: 7px 12px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text-primary);
+  font-size: 13px;
+}
+#acc .reg-chip {
+  padding: 5px 12px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  color: var(--text-secondary);
+  transition: all 0.15s;
+  white-space: nowrap;
+}
+#acc .reg-chip:hover { color: var(--text-primary); }
+#acc .reg-chip.active { background: var(--accent); border-color: var(--accent); color: #fff; }
+#acc .reg-header {
+  display: grid;
+  grid-template-columns: 1fr 1.5fr 1.5fr 1.5fr 1fr 0.8fr 0.8fr 2fr;
+  padding: 10px 14px;
+  background: var(--bg-tertiary);
+  border-bottom: 1px solid var(--border);
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-muted);
+}
+#acc .reg-header-cell {}
+#acc .reg-row {
+  display: grid;
+  grid-template-columns: 1fr 1.5fr 1.5fr 1.5fr 1fr 0.8fr 0.8fr 2fr;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--border);
+  font-size: 12px;
+  align-items: center;
+  transition: background 0.15s;
+}
+#acc .reg-row:hover { background: var(--bg-tertiary); }
+#acc .reg-row.stale { background: rgba(239,68,68,0.06); }
+#acc .reg-row.stale:hover { background: rgba(239,68,68,0.1); }
+#acc .reg-cell { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--text-primary); }
+#acc .reg-cell.muted { color: var(--text-secondary); }
+#acc .reg-badge {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-size: 11px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+#acc .reg-badge-PENDING  { background: rgba(245,158,11,0.15); color: var(--yellow); border: 1px solid rgba(245,158,11,0.3); }
+#acc .reg-badge-RUNNING  { background: rgba(16,185,129,0.15); color: var(--green); border: 1px solid rgba(16,185,129,0.3); }
+#acc .reg-badge-COMPLETED{ background: rgba(16,185,129,0.1);  color: var(--green); border: 1px solid rgba(16,185,129,0.2); }
+#acc .reg-badge-STALE    { background: rgba(239,68,68,0.15); color: var(--red); border: 1px solid rgba(239,68,68,0.3); }
+#acc .reg-badge-FAILED   { background: rgba(239,68,68,0.1);  color: var(--red); border: 1px solid rgba(239,68,68,0.2); }
+
+#acc .oc-filter-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+  flex-wrap: wrap;
+}
+#acc .oc-filter-bar input {
+  padding: 7px 12px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text-primary);
+  font-size: 13px;
+  flex: 1;
+  min-width: 160px;
+}
+#acc .oc-chip {
+  padding: 5px 12px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  color: var(--text-secondary);
+  transition: all 0.15s;
+  user-select: none;
+  white-space: nowrap;
+}
+#acc .oc-chip:hover { color: var(--text-primary); border-color: var(--accent); }
+#acc .oc-chip.active { background: rgba(99,102,241,0.15); border-color: var(--accent); color: var(--accent); }
+#acc .oc-count { font-size: 12px; color: var(--text-muted); margin-left: auto; white-space: nowrap; }
+#acc .oc-sort-icon { margin-left: 4px; opacity: 0.4; font-style: normal; }
+#acc .oc-header-cell { cursor: pointer; display: flex; align-items: center; gap: 2px; user-select: none; }
+#acc .oc-header-cell:hover { color: var(--text-primary); }
+#acc .oc-header-cell.sorted { color: var(--accent); }
+#acc .oc-header-cell.sorted .oc-sort-icon { opacity: 1; }
+#acc .oc-header {
+  display: grid;
+  grid-template-columns: minmax(0,3fr) minmax(0,1.2fr) minmax(0,1fr) minmax(0,1fr) minmax(0,0.8fr) minmax(0,1fr) minmax(0,2fr);
+  gap: 6px;
+  padding: 8px 12px;
+  background: var(--bg-secondary);
+  border-radius: 6px 6px 0 0;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  letter-spacing: 0.5px;
+}
+#acc .oc-row {
+  display: grid;
+  grid-template-columns: minmax(0,3fr) minmax(0,1.2fr) minmax(0,1fr) minmax(0,1fr) minmax(0,0.8fr) minmax(0,1fr) minmax(0,2fr);
+  gap: 6px;
+  padding: 9px 12px;
+  border-bottom: 1px solid var(--border);
+  font-size: 13px;
+  transition: background 0.15s;
+}
+#acc .oc-row:hover { background: rgba(99,102,241,0.07); }
+#acc .oc-row:last-child { border-bottom: none; }
+#acc .oc-cell { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--text-primary); }
+#acc .oc-cell.mono { font-family: 'JetBrains Mono', monospace; font-size: 12px; }
+#acc .oc-cell.muted { color: var(--text-secondary); font-size: 12px; }
+#acc .oc-cell.red { color: var(--red); }
+#acc .oc-badge { display: inline-block; padding: 2px 7px; border-radius: 4px; font-size: 11px; font-weight: 600; }
+#acc .oc-badge.webchat  { background: rgba(139,92,246,0.15); color: #a78bfa; }
+#acc .oc-badge.telegram { background: rgba(59,130,246,0.15); color: #60a5fa; }
+#acc .oc-badge.discord  { background: rgba(99,102,241,0.15); color: var(--accent); }
+#acc .oc-badge.none     { background: rgba(100,116,139,0.13); color: var(--text-muted); }
+</style>
+
+<div class="page" id="acc">
+  <div class="page-header" style="display:flex; justify-content:space-between; align-items:flex-start;">
+    <div>
+      <h1 class="page-title">ACC — Agent Command Center</h1>
+      <p class="page-subtitle">Live view of agent sessions and events</p>
+    </div>
+    <button class="btn" style="background:var(--bg-secondary);color:var(--text-primary);border:1px solid var(--border);padding:8px 14px;border-radius:6px;cursor:pointer;font-size:13px;" onclick="accFetchSessions()">🔄 Refresh</button>
+  </div>
+
+  <div class="acc-stats-bar" id="acc-stats-bar">
+    <div id="acc-stats-acc" style="display:flex;gap:24px;align-items:center;flex-wrap:wrap;">
+      <span class="acc-stat">🟢 <span class="val" id="acc-stat-running">0</span> running</span>
+      <span class="acc-stat">⚪ <span class="val" id="acc-stat-idle">0</span> idle</span>
+      <span class="acc-stat">🔴 <span class="val" id="acc-stat-crashed">0</span> crashed</span>
+      <span class="acc-stat">⚠️ <span class="val" id="acc-stat-error">0</span> error</span>
+      <span class="acc-stat">📥 <span class="val" id="acc-stat-tok-in">0</span> in today</span>
+      <span class="acc-stat">📤 <span class="val" id="acc-stat-tok-out">0</span> out today</span>
+    </div>
+    <div id="acc-stats-oc" style="display:none;gap:24px;align-items:center;flex-wrap:wrap;">
+      <span class="acc-stat">📊 <span class="val" id="oc-stat-total">0</span> sessions</span>
+      <span class="acc-stat">💰 <span class="val" id="oc-stat-cost">$0.00</span> total cost</span>
+      <span class="acc-stat">⚡ <span class="val" id="oc-stat-recent">0</span> active 1h</span>
+      <span class="acc-stat">🤖 <span class="val" id="oc-stat-top-model">-</span> top model</span>
+    </div>
+    <div id="acc-stats-tree" style="display:none;gap:24px;align-items:center;flex-wrap:wrap;">
+      <span class="acc-stat">🤖 <span class="val" id="tree-stat-agents">0</span> agents</span>
+      <span class="acc-stat">🔀 <span class="val" id="tree-stat-subagents">0</span> subagents</span>
+      <span class="acc-stat">🟢 <span class="val" id="tree-stat-active">0</span> active</span>
+      <span class="acc-stat">💰 <span class="val" id="tree-stat-cost">$0.00</span> total cost</span>
+    </div>
+    <div id="acc-stats-register" style="display:none;gap:24px;align-items:center;flex-wrap:wrap;">
+      <span class="acc-stat">📋 <span class="val" id="reg-stat-total">0</span> total</span>
+      <span class="acc-stat">⏳ <span class="val" id="reg-stat-pending">0</span> pending</span>
+      <span class="acc-stat">🟢 <span class="val" id="reg-stat-running">0</span> running</span>
+      <span class="acc-stat">💀 <span class="val" id="reg-stat-stale">0</span> stale</span>
+      <span class="acc-stat">✅ <span class="val" id="reg-stat-completed">0</span> completed</span>
+    </div>
+  </div>
+
+  <div class="acc-tabs">
+    <div class="acc-tab active" data-tab="acc" onclick="accSwitchTab('acc')">🎯 ACC Sessions</div>
+    <div class="acc-tab" data-tab="openclaw" onclick="accSwitchTab('openclaw')">⚡ OpenClaw Sessions</div>
+    <div class="acc-tab" data-tab="tree" onclick="accSwitchTab('tree')">🌳 Agent Tree</div>
+    <div class="acc-tab" data-tab="register" onclick="accSwitchTab('register')">📋 Register</div>
+  </div>
+
+  <div id="acc-tab-acc" class="acc-tab-content">
+    <div class="acc-layout">
+      <div class="card" style="padding:0; overflow:hidden;">
+        <div style="padding:12px 14px; border-bottom:1px solid var(--border); font-weight:600; font-size:13px; color:var(--text-secondary);">Sessions</div>
+        <div class="acc-sessions-header">
+          <div>Name</div>
+          <div>Agent</div>
+          <div>Status</div>
+          <div>Tokens</div>
+          <div>Ctx%</div>
+          <div>Uptime</div>
+          <div>Last Active</div>
+        </div>
+        <div id="acc-sessions-list">
+          <div class="acc-empty">Loading...</div>
+        </div>
+      </div>
+
+      <div class="card" style="padding:0; overflow:hidden;">
+        <div style="padding:12px 14px; border-bottom:1px solid var(--border); font-weight:600; font-size:13px; color:var(--text-secondary);">Event Log</div>
+        <div id="acc-events-panel">
+          <div class="acc-empty">Select a session to view events</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="acc-tab-tree" class="acc-tab-content" style="display:none;">
+    <div class="tree-search-bar">
+      <input type="text" id="tree-search" placeholder="🔍 search agents..." oninput="treeApplyFilter()">
+      <span style="font-size:12px;color:var(--text-muted);white-space:nowrap;">🟢 running if updated within</span>
+      <input type="number" id="tree-running-mins" value="60" min="1" max="480" style="width:60px;padding:5px 8px;background:var(--bg-secondary);border:1px solid var(--border);border-radius:6px;color:var(--text-primary);font-size:13px;text-align:center;" oninput="treeApplyFilter()">
+      <span style="font-size:12px;color:var(--text-muted);">min</span>
+      <button class="btn" style="background:var(--bg-secondary);color:var(--text-primary);border:1px solid var(--border);padding:7px 14px;border-radius:6px;cursor:pointer;font-size:13px;" onclick="treeFetchSessions()">🔄 Refresh</button>
+    </div>
+    <div id="tree-container">
+      <div class="acc-empty">Loading...</div>
+    </div>
+  </div>
+
+  <div id="acc-tab-register" class="acc-tab-content" style="display:none;">
+    <div class="reg-filter-bar">
+      <span class="reg-chip active" data-filter="all" onclick="regToggleChip(this)">All</span>
+      <span class="reg-chip" data-filter="PENDING" onclick="regToggleChip(this)">Pending</span>
+      <span class="reg-chip" data-filter="RUNNING" onclick="regToggleChip(this)">Running</span>
+      <span class="reg-chip" data-filter="STALE" onclick="regToggleChip(this)">Stale</span>
+      <span class="reg-chip" data-filter="COMPLETED" onclick="regToggleChip(this)">Completed</span>
+      <span class="reg-chip" data-filter="FAILED" onclick="regToggleChip(this)">Failed</span>
+      <input type="text" id="reg-search" placeholder="🔍 search label, spawner..." oninput="regApplyFilter()">
+      <button class="btn" style="background:var(--bg-secondary);color:var(--text-primary);border:1px solid var(--border);padding:7px 14px;border-radius:6px;cursor:pointer;font-size:13px;" onclick="regFetchEntries()">🔄 Refresh</button>
+    </div>
+    <div class="card" style="padding:0;overflow:hidden;">
+      <div class="reg-header">
+        <div class="reg-header-cell">Spawned</div>
+        <div class="reg-header-cell">Spawner</div>
+        <div class="reg-header-cell">Label</div>
+        <div class="reg-header-cell">Session</div>
+        <div class="reg-header-cell">Status</div>
+        <div class="reg-header-cell">Age</div>
+        <div class="reg-header-cell">Timeout</div>
+        <div class="reg-header-cell" style="flex:2">Description</div>
+      </div>
+      <div id="reg-entries-list">
+        <div class="acc-empty">Loading...</div>
+      </div>
+    </div>
+    <div id="reg-daemon-warning" style="display:none;margin-top:16px;">
+      <div class="card" style="border:1px solid var(--red);background:rgba(239,68,68,0.06);padding:16px;">
+        <span style="color:var(--red);font-weight:600;">⚠ acc-daemon not running</span>
+        <span style="color:var(--text-secondary);font-size:13px;margin-left:12px;">Start acc-daemon to see sub-agent register data.</span>
+      </div>
+    </div>
+  </div>
+
+  <div id="acc-tab-openclaw" class="acc-tab-content" style="display:none;">
+    <div class="oc-filter-bar">
+      <span class="oc-chip active" data-filter="all" onclick="ocToggleChip(this)">All</span>
+      <span class="oc-chip" data-filter="active" onclick="ocToggleChip(this)">Active</span>
+      <span class="oc-chip" data-filter="agents" onclick="ocToggleChip(this)">Agents</span>
+      <span class="oc-chip" data-filter="crons" onclick="ocToggleChip(this)">Crons</span>
+      <span class="oc-chip" data-filter="subagents" onclick="ocToggleChip(this)">Subagents</span>
+      <input type="text" id="oc-search" placeholder="🔍 search key..." oninput="ocApplyFilter()">
+      <span class="oc-count" id="oc-count"></span>
+      <button class="btn" style="background:var(--bg-secondary);color:var(--text-primary);border:1px solid var(--border);padding:7px 14px;border-radius:6px;cursor:pointer;font-size:13px;" onclick="ocFetchSessions()">🔄 Refresh</button>
+    </div>
+    <div class="card" style="padding:0; overflow:hidden;">
+      <div class="oc-header">
+        <div class="oc-header-cell" data-col="key" onclick="ocSortBy('key')">Key <i class="oc-sort-icon" id="oc-sort-key">↕</i></div>
+        <div class="oc-header-cell" data-col="model" onclick="ocSortBy('model')">Model <i class="oc-sort-icon" id="oc-sort-model">↕</i></div>
+        <div class="oc-header-cell" data-col="channel" onclick="ocSortBy('channel')">Channel <i class="oc-sort-icon" id="oc-sort-channel">↕</i></div>
+        <div class="oc-header-cell" data-col="tokens" onclick="ocSortBy('tokens')">Tokens <i class="oc-sort-icon" id="oc-sort-tokens">↕</i></div>
+        <div class="oc-header-cell" data-col="cost" onclick="ocSortBy('cost')">Cost <i class="oc-sort-icon" id="oc-sort-cost">↕</i></div>
+        <div class="oc-header-cell" data-col="updated" onclick="ocSortBy('updated')">Updated <i class="oc-sort-icon" id="oc-sort-updated">↕</i></div>
+        <div class="oc-header-cell" data-col="lastmsg" onclick="ocSortBy('lastmsg')">Last Message <i class="oc-sort-icon" id="oc-sort-lastmsg">↕</i></div>
+      </div>
+      <div id="oc-sessions-list">
+        <div class="acc-empty">Loading...</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+(function() {
+  let accSelectedSession = null;
+  let accRefreshTimer = null;
+  let accSessionsData = [];
+
+  function accFmtNum(n) {
+    if (n == null) return '0';
+    if (n >= 1000000) return (n / 1000000).toFixed(1) + 'M';
+    if (n >= 1000) return (n / 1000).toFixed(1) + 'k';
+    return String(n);
+  }
+
+  function accFmtUptime(createdAt) {
+    if (!createdAt) return '-';
+    const secs = Math.floor((Date.now() - createdAt) / 1000);
+    if (secs < 60) return secs + 's';
+    if (secs < 3600) return Math.floor(secs / 60) + 'm';
+    if (secs < 86400) return Math.floor(secs / 3600) + 'h';
+    return Math.floor(secs / 86400) + 'd';
+  }
+
+  function accFmtRelative(ts) {
+    if (!ts) return '-';
+    const secs = Math.floor((Date.now() - ts) / 1000);
+    if (secs < 5) return 'just now';
+    if (secs < 60) return secs + 's ago';
+    if (secs < 3600) return Math.floor(secs / 60) + 'm ago';
+    if (secs < 86400) return Math.floor(secs / 3600) + 'h ago';
+    return Math.floor(secs / 86400) + 'd ago';
+  }
+
+  function accFmtTime(ts) {
+    if (!ts) return '';
+    const d = new Date(ts);
+    return d.toTimeString().slice(0, 8);
+  }
+
+  function accEsc(s) {
+    if (!s) return '';
+    return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  }
+
+  function accStatusClass(status) {
+    const s = (status || '').toLowerCase();
+    if (['running','idle','busy','thinking','error','crashed','closed'].includes(s)) return s;
+    return 'closed';
+  }
+
+  function accEvBadgeClass(kind) {
+    const k = (kind || '').toLowerCase();
+    const map = { reply:'ev-reply', tool_call:'ev-tool_call', tool_result:'ev-tool_result', thinking:'ev-thinking', error:'ev-error', status_change:'ev-status_change' };
+    return map[k] || 'ev-default';
+  }
+
+  window.accFetchSessions = async function() {
+    try {
+      const r = await authFetch(API_BASE + '/api/acc/sessions');
+      const data = await r.json();
+      accSessionsData = data.sessions || [];
+      accRenderStats(data.stats || {});
+      accRenderSessions(accSessionsData);
+    } catch (e) {
+      document.getElementById('acc-sessions-list').innerHTML = '<div class="acc-empty" style="color:var(--red);">Error: ' + accEsc(String(e.message || e)) + '</div>';
+    }
+  };
+
+  function accRenderStats(stats) {
+    document.getElementById('acc-stat-running').textContent = stats.running || 0;
+    document.getElementById('acc-stat-idle').textContent = stats.idle || 0;
+    document.getElementById('acc-stat-crashed').textContent = stats.crashed || 0;
+    document.getElementById('acc-stat-error').textContent = stats.error || 0;
+    document.getElementById('acc-stat-tok-in').textContent = accFmtNum(stats.token_in_today || 0);
+    document.getElementById('acc-stat-tok-out').textContent = accFmtNum(stats.token_out_today || 0);
+  }
+
+  function accRenderSessions(sessions) {
+    const el = document.getElementById('acc-sessions-list');
+    if (!sessions || sessions.length === 0) {
+      el.innerHTML = '<div class="acc-empty">No sessions found</div>';
+      return;
+    }
+    el.innerHTML = sessions.map(s => {
+      const name = accEsc((s.name || s.id || '').slice(0, 20));
+      const agent = accEsc((s.agent_type || '-').slice(0, 10));
+      const statusCls = accStatusClass(s.status);
+      const statusLabel = accEsc(s.status || '-');
+      const tokens = (s.token_in || 0) + '/' + (s.token_out || 0);
+      const ctx = s.context_pct != null ? s.context_pct.toFixed(1) + '%' : '-';
+      const uptime = accFmtUptime(s.created_at);
+      const lastActive = accFmtRelative(s.last_active);
+      const sel = accSelectedSession === s.id ? ' selected' : '';
+      return `<div class="acc-session-row${sel}" data-id="${accEsc(s.id)}">
+        <div class="acc-cell" title="${accEsc(s.name || s.id)}">${name}</div>
+        <div class="acc-cell muted">${agent}</div>
+        <div class="acc-cell"><span class="acc-status ${statusCls}">${statusLabel}</span></div>
+        <div class="acc-cell muted">${tokens}</div>
+        <div class="acc-cell muted">${ctx}</div>
+        <div class="acc-cell muted">${uptime}</div>
+        <div class="acc-cell muted">${lastActive}</div>
+      </div>`;
+    }).join('');
+
+    el.querySelectorAll('.acc-session-row').forEach(row => {
+      row.addEventListener('click', () => {
+        accSelectedSession = row.dataset.id;
+        el.querySelectorAll('.acc-session-row').forEach(r => r.classList.remove('selected'));
+        row.classList.add('selected');
+        const sess = accSessionsData.find(s => s.id === accSelectedSession);
+        accFetchEvents(accSelectedSession, sess);
+      });
+    });
+  }
+
+  window.accFetchEvents = async function(sessionId, sess) {
+    const panel = document.getElementById('acc-events-panel');
+    panel.innerHTML = '<div class="acc-empty">Loading events...</div>';
+    try {
+      const r = await authFetch(API_BASE + '/api/acc/events?session=' + encodeURIComponent(sessionId) + '&limit=100');
+      const data = await r.json();
+      accRenderEvents(data.events || [], sess);
+    } catch (e) {
+      panel.innerHTML = '<div class="acc-empty" style="color:var(--red);">Error: ' + accEsc(String(e.message || e)) + '</div>';
+    }
+  };
+
+  function accRenderEvents(events, sess) {
+    const panel = document.getElementById('acc-events-panel');
+    let infoHtml = '';
+    if (sess) {
+      const prompt = sess.prompt_init ? accEsc(sess.prompt_init.slice(0, 120)) : '';
+      infoHtml = `<div class="acc-session-info"><strong>${accEsc(sess.name || sess.id)}</strong>${prompt ? ' — ' + prompt : ''}</div>`;
+    }
+    if (!events || events.length === 0) {
+      panel.innerHTML = infoHtml + '<div class="acc-empty">No events for this session</div>';
+      return;
+    }
+    const evHtml = events.map(ev => {
+      const time = accFmtTime(ev.ts);
+      const kind = ev.kind || 'unknown';
+      const badgeCls = accEvBadgeClass(kind);
+      let content = ev.content || ev.tool_name || '';
+      if (ev.exit_code != null) content += (content ? ' ' : '') + '[exit ' + ev.exit_code + ']';
+      const preview = accEsc(content.slice(0, 100));
+      return `<div class="acc-event">
+        <div class="acc-event-header">
+          <span style="font-family:monospace">[${accEsc(time)}]</span>
+          <span class="ev-badge ${badgeCls}">${accEsc(kind)}</span>
+        </div>
+        <div class="acc-event-content">${preview}</div>
+      </div>`;
+    }).join('');
+    panel.innerHTML = infoHtml + '<div class="acc-events-wrap" id="acc-events-scroll">' + evHtml + '</div>';
+    const scroll = document.getElementById('acc-events-scroll');
+    if (scroll) scroll.scrollTop = scroll.scrollHeight;
+  }
+
+  window.accStartAutoRefresh = function() {
+    accStopAutoRefresh();
+    accRefreshTimer = setInterval(() => {
+      const page = document.getElementById('acc');
+      if (!page?.classList.contains('active')) return;
+      const activeTab = page.querySelector('.acc-tab.active')?.dataset?.tab;
+      if (!activeTab || activeTab === 'acc') accFetchSessions();
+    }, 10000);
+    ocRefreshTimer = setInterval(() => {
+      const page = document.getElementById('acc');
+      if (!page?.classList.contains('active')) return;
+      const activeTab = page.querySelector('.acc-tab.active')?.dataset?.tab;
+      if (activeTab === 'openclaw') ocFetchSessions();
+      if (activeTab === 'tree') treeFetchSessions();
+      if (activeTab === 'register') regFetchEntries();
+    }, 30000);
+  };
+
+  window.accStopAutoRefresh = function() {
+    if (accRefreshTimer) { clearInterval(accRefreshTimer); accRefreshTimer = null; }
+    if (ocRefreshTimer) { clearInterval(ocRefreshTimer); ocRefreshTimer = null; }
+  };
+
+  // ── Tab switching ────────────────────────────────────────────────────────────
+  window.accSwitchTab = function(tab) {
+    document.querySelectorAll('#acc .acc-tab').forEach(t => {
+      t.classList.toggle('active', t.dataset.tab === tab);
+    });
+    document.getElementById('acc-tab-acc').style.display = tab === 'acc' ? '' : 'none';
+    document.getElementById('acc-tab-openclaw').style.display = tab === 'openclaw' ? '' : 'none';
+    document.getElementById('acc-tab-tree').style.display = tab === 'tree' ? '' : 'none';
+    document.getElementById('acc-tab-register').style.display = tab === 'register' ? '' : 'none';
+    document.getElementById('acc-stats-acc').style.display = tab === 'acc' ? 'flex' : 'none';
+    document.getElementById('acc-stats-oc').style.display = tab === 'openclaw' ? 'flex' : 'none';
+    document.getElementById('acc-stats-tree').style.display = tab === 'tree' ? 'flex' : 'none';
+    document.getElementById('acc-stats-register').style.display = tab === 'register' ? 'flex' : 'none';
+    if (tab === 'register') {
+      regFetchEntries();
+    } else if (tab === 'openclaw') {
+      ocFetchSessions();
+    } else if (tab === 'tree') {
+      treeFetchSessions();
+    } else {
+      accFetchSessions();
+    }
+  };
+
+  // ── OpenClaw Sessions ────────────────────────────────────────────────────────
+  let ocSessionsAll = [];
+  let ocRefreshTimer = null;
+
+  window.ocFetchSessions = async function() {
+    try {
+      const r = await authFetch(API_BASE + '/api/acc/openclaw-sessions');
+      const data = await r.json();
+      ocSessionsAll = data.sessions || [];
+      ocRenderStats(data.stats || {});
+      ocApplyFilter();
+    } catch (e) {
+      document.getElementById('oc-sessions-list').innerHTML =
+        '<div class="acc-empty" style="color:var(--red);">Error: ' + accEsc(String(e.message || e)) + '</div>';
+    }
+  };
+
+  function ocRenderStats(stats) {
+    document.getElementById('oc-stat-total').textContent = stats.withTokens || 0;
+    document.getElementById('oc-stat-cost').textContent = ocFmtCost(stats.totalCost || 0);
+    document.getElementById('oc-stat-recent').textContent = stats.recentHour || 0;
+    document.getElementById('oc-stat-top-model').textContent = ocFmtModel(stats.topModel || '-');
+  }
+
+    // Sort state
+  let ocSortCol = 'updated';
+  let ocSortDir = 'desc'; // 'asc' | 'desc'
+  // Active filter chips (multi-select; 'all' is exclusive)
+  let ocActiveFilters = new Set(['all']);
+
+  window.ocToggleChip = function(chip) {
+    const f = chip.dataset.filter;
+    if (f === 'all') {
+      // All clears everything else
+      ocActiveFilters = new Set(['all']);
+    } else {
+      ocActiveFilters.delete('all');
+      if (ocActiveFilters.has(f)) {
+        ocActiveFilters.delete(f);
+        if (ocActiveFilters.size === 0) ocActiveFilters.add('all');
+      } else {
+        ocActiveFilters.add(f);
+      }
+    }
+    // Sync chip UI
+    document.querySelectorAll('#acc .oc-chip').forEach(c => {
+      c.classList.toggle('active', ocActiveFilters.has(c.dataset.filter));
+    });
+    ocApplyFilter();
+  };
+
+  window.ocSortBy = function(col) {
+    if (ocSortCol === col) {
+      ocSortDir = ocSortDir === 'asc' ? 'desc' : 'asc';
+    } else {
+      ocSortCol = col;
+      ocSortDir = col === 'key' || col === 'model' || col === 'channel' || col === 'lastmsg' ? 'asc' : 'desc';
+    }
+    // Update sort icons
+    ['key','model','channel','tokens','cost','updated','lastmsg'].forEach(c => {
+      const el = document.getElementById('oc-sort-' + c);
+      const hdr = document.querySelector('#acc .oc-header-cell[data-col="' + c + '"]');
+      if (!el || !hdr) return;
+      if (c === ocSortCol) {
+        el.textContent = ocSortDir === 'asc' ? '↑' : '↓';
+        hdr.classList.add('sorted');
+      } else {
+        el.textContent = '↕';
+        hdr.classList.remove('sorted');
+      }
+    });
+    ocApplyFilter();
+  };
+
+  window.ocApplyFilter = function() {
+    const search = (document.getElementById('oc-search')?.value || '').toLowerCase();
+    let filtered = ocSessionsAll.filter(s => {
+      const key = s.key || '';
+      // Multi-filter: pass if matches ANY active non-all filter
+      if (!ocActiveFilters.has('all')) {
+        const matchesAny = [...ocActiveFilters].some(f => {
+          if (f === 'active') return Date.now() - (s.updatedAt || 0) < 3600000;
+          if (f === 'agents') return /^agent:[^:]+:main$/.test(key);
+          if (f === 'crons')  return key.includes(':cron:');
+          if (f === 'subagents') return key.includes(':subagent:');
+          return true;
+        });
+        if (!matchesAny) return false;
+      }
+      if (search && !key.toLowerCase().includes(search) && !(s.lastMessage||'').toLowerCase().includes(search)) return false;
+      return true;
+    });
+
+    // Sort
+    filtered = filtered.slice().sort((a, b) => {
+      let va, vb;
+      if (ocSortCol === 'key')     { va = a.key || ''; vb = b.key || ''; }
+      else if (ocSortCol === 'model')   { va = ocFmtModel(a.model||''); vb = ocFmtModel(b.model||''); }
+      else if (ocSortCol === 'channel') { va = a.channel||''; vb = b.channel||''; }
+      else if (ocSortCol === 'tokens')  { va = a.totalTokens||0; vb = b.totalTokens||0; }
+      else if (ocSortCol === 'cost')    { va = a.cost||0; vb = b.cost||0; }
+      else if (ocSortCol === 'updated') { va = a.updatedAt||0; vb = b.updatedAt||0; }
+      else if (ocSortCol === 'lastmsg') { va = a.lastMessage||''; vb = b.lastMessage||''; }
+      else { va = 0; vb = 0; }
+      if (typeof va === 'string') return ocSortDir === 'asc' ? va.localeCompare(vb) : vb.localeCompare(va);
+      return ocSortDir === 'asc' ? va - vb : vb - va;
+    });
+
+    const countEl = document.getElementById('oc-count');
+    if (countEl) countEl.textContent = 'Showing ' + filtered.length + ' of ' + ocSessionsAll.length;
+    ocRenderTable(filtered);
+  };
+
+  function ocRenderTable(sessions) {
+    const el = document.getElementById('oc-sessions-list');
+    if (!sessions || sessions.length === 0) {
+      el.innerHTML = '<div class="acc-empty">No sessions found</div>';
+      return;
+    }
+    el.innerHTML = sessions.map(s => {
+      const key = s.key || '';
+      const keyDisplay = key.length > 45 ? key.slice(0, 45) + '\u2026' : key;
+      const model = ocFmtModel(s.model || '-');
+      const channel = (s.channel || '-').toLowerCase();
+      const channelBadgeCls = { webchat: 'webchat', telegram: 'telegram', discord: 'discord' }[channel] || 'none';
+      const channelHtml = channel !== '-'
+        ? '<span class="oc-badge ' + channelBadgeCls + '">' + accEsc(channel) + '</span>'
+        : '<span style="color:var(--text-muted)">-</span>';
+      const tokens = ocFmtTokens(s.totalTokens || 0);
+      const tokRed = (s.totalTokens || 0) > 500000 ? ' red' : '';
+      const cost = ocFmtCost(s.cost || 0);
+      const costRed = (s.cost || 0) > 5 ? ' red' : '';
+      const updated = ocRelTime(s.updatedAt);
+      const lastMsg = accEsc((s.lastMessage || '').slice(0, 80));
+      return '<div class="oc-row">' +
+        '<div class="oc-cell mono" title="' + accEsc(key) + '">' + accEsc(keyDisplay) + '</div>' +
+        '<div class="oc-cell muted">' + accEsc(model) + '</div>' +
+        '<div class="oc-cell">' + channelHtml + '</div>' +
+        '<div class="oc-cell muted' + tokRed + '">' + tokens + '</div>' +
+        '<div class="oc-cell muted' + costRed + '">' + cost + '</div>' +
+        '<div class="oc-cell muted">' + updated + '</div>' +
+        '<div class="oc-cell muted">' + lastMsg + '</div>' +
+        '</div>';
+    }).join('');
+  }
+
+  function ocFmtModel(model) {
+    if (!model || model === '-' || model === 'unknown/unknown') return '-';
+    const last = model.split('/').pop();
+    return last.replace(/^claude-/, '');
+  }
+
+  function ocFmtTokens(n) {
+    if (!n) return '0';
+    if (n >= 1000000) return (n / 1000000).toFixed(1) + 'M';
+    if (n >= 1000) return Math.round(n / 1000) + 'k';
+    return String(n);
+  }
+
+  function ocFmtCost(n) {
+    return '$' + (n || 0).toFixed(2);
+  }
+
+  function ocRelTime(ts) {
+    if (!ts) return '-';
+    const secs = Math.floor((Date.now() - ts) / 1000);
+    if (secs < 5) return 'just now';
+    if (secs < 60) return secs + 's ago';
+    if (secs < 3600) return Math.floor(secs / 60) + 'm ago';
+    if (secs < 86400) return Math.floor(secs / 3600) + 'h ago';
+    return Math.floor(secs / 86400) + 'd ago';
+  }
+
+  // ── Register tab ─────────────────────────────────────────────────────────────
+  let regEntriesAll = [];
+  let regFilter = 'all';
+  let regSearch = '';
+
+  window.regFetchEntries = async function() {
+    try {
+      const r = await authFetch(API_BASE + '/api/acc/register');
+      if (!r.ok) throw new Error('http ' + r.status);
+      const data = await r.json();
+      regEntriesAll = data.entries || [];
+      const stats = data.stats || {};
+      document.getElementById('reg-stat-total').textContent = stats.total || 0;
+      document.getElementById('reg-stat-pending').textContent = stats.pending || 0;
+      document.getElementById('reg-stat-running').textContent = stats.running || 0;
+      document.getElementById('reg-stat-stale').textContent = stats.stale || 0;
+      document.getElementById('reg-stat-completed').textContent = stats.completed || 0;
+      const warning = document.getElementById('reg-daemon-warning');
+      if (data.error) {
+        warning.style.display = '';
+      } else {
+        warning.style.display = 'none';
+      }
+      regRender();
+    } catch (e) {
+      document.getElementById('reg-entries-list').innerHTML = '<div class="acc-empty">Failed to load register data</div>';
+    }
+  };
+
+  window.regToggleChip = function(el) {
+    document.querySelectorAll('#acc-tab-register .reg-chip').forEach(c => c.classList.remove('active'));
+    el.classList.add('active');
+    regFilter = el.dataset.filter;
+    regRender();
+  };
+
+  window.regApplyFilter = function() {
+    regSearch = document.getElementById('reg-search').value.toLowerCase();
+    regRender();
+  };
+
+  function regRender() {
+    const entries = regEntriesAll.filter(e => {
+      if (regFilter !== 'all' && e.status !== regFilter) return false;
+      if (regSearch) {
+        const hay = [e.label, e.spawner, e.session_id, e.description].join(' ').toLowerCase();
+        if (!hay.includes(regSearch)) return false;
+      }
+      return true;
+    });
+
+    const list = document.getElementById('reg-entries-list');
+    if (!entries.length) {
+      list.innerHTML = '<div class="acc-empty">No entries' + (regFilter !== 'all' ? ' for filter: ' + regFilter : '') + '</div>';
+      return;
+    }
+
+    list.innerHTML = entries.map(e => {
+      const isStale = e.status === 'STALE';
+      const spawnedAgo = regRelTime(e.spawned_at);
+      const spawnerShort = (e.spawner || '').split(':').slice(-2).join(':') || e.spawner || '-';
+      const sessionShort = e.session_id ? e.session_id.substring(0, 16) : '-';
+      const desc = e.description ? e.description.substring(0, 80) : '-';
+      const badgeLabel = {
+        PENDING: '⏳ pending',
+        RUNNING: '▶ running',
+        COMPLETED: '✅ done',
+        STALE: '💀 stale',
+        FAILED: '❌ failed',
+      }[e.status] || e.status;
+
+      return `<div class="reg-row${isStale ? ' stale' : ''}">
+        <div class="reg-cell muted" title="${new Date(e.spawned_at).toISOString()}">${spawnedAgo}</div>
+        <div class="reg-cell muted" title="${e.spawner}">${spawnerShort}</div>
+        <div class="reg-cell" style="font-weight:500;">${e.label || '-'}</div>
+        <div class="reg-cell muted" title="${e.session_id || ''}" style="font-family:'JetBrains Mono',monospace;font-size:11px;">${sessionShort}</div>
+        <div class="reg-cell"><span class="reg-badge reg-badge-${e.status}">${badgeLabel}</span></div>
+        <div class="reg-cell muted">${regRelTime(e.spawned_at)}</div>
+        <div class="reg-cell muted">${e.timeout_mins}m</div>
+        <div class="reg-cell muted" title="${e.description || ''}" style="flex:2;">${desc}</div>
+      </div>`;
+    }).join('');
+  }
+
+  function regRelTime(ms) {
+    if (!ms) return '-';
+    const secs = Math.floor((Date.now() - ms) / 1000);
+    if (secs < 60) return secs + 's ago';
+    if (secs < 3600) return Math.floor(secs / 60) + 'm ago';
+    if (secs < 86400) return Math.floor(secs / 3600) + 'h ago';
+    return Math.floor(secs / 86400) + 'd ago';
+  }
+
+  // ── Agent Tree ───────────────────────────────────────────────────────────────
+  let treeSessionsAll = [];
+  let treeCollapsed = {}; // agentName → bool
+  let treeSearch = '';
+
+  function treeParseKey(key) {
+    const parts = key.split(':');
+    if (parts[0] !== 'agent' || parts.length < 3) return null;
+    const name = parts[1];
+    const kind = parts[2];
+    const rest = parts.slice(3).join(':');
+    return { name, kind, rest, isParent: kind === 'main' };
+  }
+
+  function treeChildLabel(kind, rest, sessionLabel) {
+    const uuid = rest.split(':')[0];
+    const shortId = uuid.slice(0, 8);
+    // Use the session's label field if it's meaningful (not just the uuid prefix)
+    const namedLabel = sessionLabel && sessionLabel !== shortId && !sessionLabel.match(/^[0-9a-f-]{8,}$/)
+      ? sessionLabel + ' (' + shortId + ')'
+      : null;
+    if (kind === 'subagent') return namedLabel || ('subagent:' + shortId);
+    if (kind === 'cron' && rest.includes(':run')) return '\u21b3 run:' + shortId;
+    if (kind === 'cron') return namedLabel || ('cron:' + shortId);
+    if (kind === 'telegram') return 'telegram:' + rest.split(':').filter(Boolean).slice(0, 2).join(':');
+    return kind + (rest ? ':' + rest.slice(0, 12) : '');
+  }
+
+  window.treeFetchSessions = async function() {
+    try {
+      const r = await authFetch(API_BASE + '/api/acc/openclaw-sessions');
+      const data = await r.json();
+      treeSessionsAll = data.sessions || [];
+      treeApplyFilter();
+    } catch (e) {
+      document.getElementById('tree-container').innerHTML =
+        '<div class="acc-empty" style="color:var(--red);">Error: ' + accEsc(String(e.message || e)) + '</div>';
+    }
+  };
+
+  window.treeApplyFilter = function() {
+    treeSearch = (document.getElementById('tree-search')?.value || '').toLowerCase();
+    treeRender(treeSessionsAll, treeSearch);
+  };
+
+  window.treeToggle = function(agentName) {
+    treeCollapsed[agentName] = !treeCollapsed[agentName];
+    treeRender(treeSessionsAll, treeSearch);
+  };
+
+  function treeRender(sessions, search) {
+    const container = document.getElementById('tree-container');
+    if (!sessions || sessions.length === 0) {
+      container.innerHTML = '<div class="acc-empty">No sessions found</div>';
+      return;
+    }
+
+    // Parse all keys, group by agent name
+    const groups = new Map(); // name → { main: session|null, children: session[] }
+    for (const s of sessions) {
+      const parsed = treeParseKey(s.key || '');
+      if (!parsed) continue;
+      if (!groups.has(parsed.name)) groups.set(parsed.name, { name: parsed.name, main: null, children: [] });
+      const g = groups.get(parsed.name);
+      if (parsed.isParent) {
+        g.main = s;
+      } else {
+        g.children.push({ ...s, _parsed: parsed });
+      }
+    }
+
+    // Filter by search
+    const now = Date.now();
+    let groupList = [...groups.values()].filter(g => {
+      if (!search) return true;
+      if (g.name.toLowerCase().includes(search)) return true;
+      if (g.main && (g.main.key || '').toLowerCase().includes(search)) return true;
+      return g.children.some(c => (c.key || '').toLowerCase().includes(search));
+    });
+
+    // Sort groups: most recently active first
+    groupList.sort((a, b) => {
+      const aTime = Math.max(
+        a.main ? (a.main.updatedAt || 0) : 0,
+        ...a.children.map(c => c.updatedAt || 0)
+      );
+      const bTime = Math.max(
+        b.main ? (b.main.updatedAt || 0) : 0,
+        ...b.children.map(c => c.updatedAt || 0)
+      );
+      return bTime - aTime;
+    });
+
+    // Sort children within each group
+    groupList.forEach(g => {
+      g.children.sort((a, b) => {
+        const kindOrder = { subagent: 0, cron: 1, telegram: 2 };
+        const ao = kindOrder[a._parsed?.kind] ?? 3;
+        const bo = kindOrder[b._parsed?.kind] ?? 3;
+        if (ao !== bo) return ao - bo;
+        return (b.updatedAt || 0) - (a.updatedAt || 0);
+      });
+    });
+
+    // Auto-expand: only set initial state once — never overwrite user's toggle
+    groupList.forEach(g => {
+      if (!(g.name in treeCollapsed)) {
+        const lastActive = Math.max(
+          g.main ? (g.main.updatedAt || 0) : 0,
+          ...g.children.map(c => c.updatedAt || 0)
+        );
+        treeCollapsed[g.name] = (now - lastActive) >= 3600000; // collapsed if inactive > 1h
+      }
+    });
+
+    // Compute stats
+    let totalAgents = groupList.length;
+    let totalSubagents = 0;
+    let totalActive = 0;
+    let totalCost = 0;
+    groupList.forEach(g => {
+      totalSubagents += g.children.filter(c => c._parsed?.kind === 'subagent').length;
+      const lastActive = Math.max(
+        g.main ? (g.main.updatedAt || 0) : 0,
+        ...g.children.map(c => c.updatedAt || 0)
+      );
+      if (now - lastActive < 300000) totalActive++;
+      if (g.main) totalCost += g.main.cost || 0;
+      g.children.forEach(c => { totalCost += c.cost || 0; });
+    });
+    document.getElementById('tree-stat-agents').textContent = totalAgents;
+    document.getElementById('tree-stat-subagents').textContent = totalSubagents;
+    document.getElementById('tree-stat-active').textContent = totalActive;
+    document.getElementById('tree-stat-cost').textContent = '$' + totalCost.toFixed(2);
+
+    // Render
+    const html = groupList.map(g => {
+      const collapsed = treeCollapsed[g.name];
+      const escapedName = accEsc(g.name);
+
+      // Aggregate totals
+      let totalTokens = g.main ? (g.main.totalTokens || 0) : 0;
+      let groupCost = g.main ? (g.main.cost || 0) : 0;
+      let lastActiveTs = g.main ? (g.main.updatedAt || 0) : 0;
+      g.children.forEach(c => {
+        totalTokens += c.totalTokens || 0;
+        groupCost += c.cost || 0;
+        if ((c.updatedAt || 0) > lastActiveTs) lastActiveTs = c.updatedAt || 0;
+      });
+
+      // Status dot
+      const ageDiff = now - lastActiveTs;
+      const runningMs = (parseInt(document.getElementById('tree-running-mins')?.value || '60', 10) || 60) * 60000;
+      const hasRunningChild = g.children.some(c => (now - (c.updatedAt||0)) < runningMs && c._parsed?.kind === 'subagent');
+const dotCls = hasRunningChild ? 'running' : ageDiff < 300000 ? 'active' : ageDiff < 3600000 ? 'recent' : 'idle';
+
+      const model = g.main ? ocFmtModel(g.main.model || '-') : '-';
+      const tokStr = ocFmtTokens(totalTokens);
+      const costStr = '$' + groupCost.toFixed(2);
+      const timeStr = ocRelTime(lastActiveTs);
+      const toggleIcon = collapsed ? '▶' : '▼';
+      const expandedCls = collapsed ? '' : ' expanded';
+
+      const parentHtml = '<div class="tree-parent' + expandedCls + '" onclick="treeToggle(\'' + accEsc(g.name) + '\')">' +
+        '<div class="tree-parent-name"><span class="tree-toggle">' + toggleIcon + '</span>' +
+        '<span class="tree-status-dot ' + dotCls + '"></span>' + escapedName + '</div>' +
+        '<div class="tree-meta">' + accEsc(model) + '</div>' +
+        '<div class="tree-meta">' + tokStr + '</div>' +
+        '<div class="tree-meta">' + costStr + '</div>' +
+        '<div class="tree-meta">' + timeStr + '</div>' +
+        '<div></div>' +
+        '</div>';
+
+      if (collapsed || g.children.length === 0) {
+        return '<div class="tree-group">' + parentHtml + '</div>';
+      }
+
+      const childrenHtml = g.children.map((c, i) => {
+        const isLast = i === g.children.length - 1;
+        const connector = isLast ? '\u2514\u2500' : '\u251c\u2500';
+        const label = treeChildLabel(c._parsed?.kind || '', c._parsed?.rest || '', c.label || '');
+        const cModel = ocFmtModel(c.model || '-');
+        const cTok = ocFmtTokens(c.totalTokens || 0);
+        const cCost = '$' + (c.cost || 0).toFixed(2);
+        const cTime = ocRelTime(c.updatedAt);
+        const cMsg = accEsc((c.lastMessage || '').slice(0, 60));
+        // Running = updated within configurable threshold and is a subagent
+        const cAge = now - (c.updatedAt || 0);
+        const isRunning = cAge < runningMs && c._parsed?.kind === 'subagent';
+        const cDotCls = isRunning ? 'running' : cAge < 300000 ? 'active' : cAge < 3600000 ? 'recent' : 'idle';
+        const runningBadge = isRunning ? '<span class="tree-running-badge">running</span>' : '';
+        return '<div class="tree-child">' +
+          '<div class="tree-child-key">' +
+          '<span class="tree-connector">' + connector + '</span>' +
+          '<span class="tree-status-dot ' + cDotCls + '"></span>' +
+          '<span class="tree-child-label" title="' + accEsc(c.key || '') + '">' + accEsc(label) + '</span>' +
+          runningBadge + '</div>' +
+          '<div class="tree-meta">' + accEsc(cModel) + '</div>' +
+          '<div class="tree-meta">' + cTok + '</div>' +
+          '<div class="tree-meta">' + cCost + '</div>' +
+          '<div class="tree-meta">' + cTime + '</div>' +
+          '<div class="tree-lastmsg">' + cMsg + '</div>' +
+          '</div>';
+      }).join('');
+
+      return '<div class="tree-group">' + parentHtml +
+        '<div class="tree-children">' + childrenHtml + '</div>' +
+        '</div>';
+    }).join('');
+
+    container.innerHTML = html || '<div class="acc-empty">No agents found</div>';
+  }
+
+})();
+</script>
+</body>
+</html>
   </main>
 </div>
 
@@ -4669,6 +5840,12 @@ document.querySelectorAll('.nav-item').forEach(item => {
       tlStartAutoRefresh();
     } else {
       tlStopAutoRefresh();
+    }
+    if (page === 'acc') {
+      accFetchSessions();
+      accStartAutoRefresh();
+    } else {
+      accStopAutoRefresh();
     }
   });
 });
@@ -8517,5 +9694,4 @@ document.querySelectorAll('.tl-chip[data-type]').forEach(chip => {
   chip.addEventListener('click', () => tlToggleType(chip));
 });
 </script>
-</body>
-</html>
+
