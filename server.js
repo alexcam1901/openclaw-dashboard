@@ -3756,6 +3756,50 @@ const server = http.createServer((req, res) => {
     return;
   }
 
+  if (req.url.startsWith('/api/acc/register')) {
+    const urlObj = new URL(req.url, 'http://localhost');
+    const status = urlObj.searchParams.get('status') || '';
+    const ACC_DAEMON_HTTP = 'http://127.0.0.1:18432';
+
+    try {
+      const targetUrl = status
+        ? `${ACC_DAEMON_HTTP}/register?status=${encodeURIComponent(status)}`
+        : `${ACC_DAEMON_HTTP}/register`;
+
+      const fetchWithTimeout = () => new Promise((resolve, reject) => {
+        const timeout = setTimeout(() => reject(new Error('timeout')), 2000);
+        http.get(targetUrl, (r) => {
+          clearTimeout(timeout);
+          let body = '';
+          r.on('data', (d) => { body += d; });
+          r.on('end', () => resolve(body));
+          r.on('error', reject);
+        }).on('error', reject);
+      });
+
+      const raw = await fetchWithTimeout();
+      const entries = JSON.parse(raw);
+      const stats = {
+        total: entries.length,
+        pending: entries.filter(e => e.status === 'PENDING').length,
+        running: entries.filter(e => e.status === 'RUNNING').length,
+        stale: entries.filter(e => e.status === 'STALE').length,
+        completed: entries.filter(e => e.status === 'COMPLETED').length,
+        failed: entries.filter(e => e.status === 'FAILED').length,
+      };
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ entries, stats }));
+    } catch (e) {
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({
+        entries: [],
+        error: 'acc-daemon not running',
+        stats: { total: 0, pending: 0, running: 0, stale: 0, completed: 0, failed: 0 },
+      }));
+    }
+    return;
+  }
+
   try {
     const html = fs.readFileSync(htmlPath, 'utf8');
     res.writeHead(200, { 'Content-Type': 'text/html' });

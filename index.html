@@ -3777,6 +3777,80 @@ body {
 #acc .tree-search-bar input { flex: 1; padding: 7px 12px; background: var(--bg-secondary); border: 1px solid var(--border); border-radius: 6px; color: var(--text-primary); font-size: 13px; }
 #acc .tree-meta { font-size: 11px; color: var(--text-muted); }
 #acc .tree-lastmsg { color: var(--text-muted); font-size: 11px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* ── Register tab ─────────────────────────────────────────────────────────── */
+#acc .reg-filter-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+}
+#acc .reg-filter-bar input {
+  flex: 1;
+  min-width: 160px;
+  padding: 7px 12px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text-primary);
+  font-size: 13px;
+}
+#acc .reg-chip {
+  padding: 5px 12px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  color: var(--text-secondary);
+  transition: all 0.15s;
+  white-space: nowrap;
+}
+#acc .reg-chip:hover { color: var(--text-primary); }
+#acc .reg-chip.active { background: var(--accent); border-color: var(--accent); color: #fff; }
+#acc .reg-header {
+  display: grid;
+  grid-template-columns: 1fr 1.5fr 1.5fr 1.5fr 1fr 0.8fr 0.8fr 2fr;
+  padding: 10px 14px;
+  background: var(--bg-tertiary);
+  border-bottom: 1px solid var(--border);
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-muted);
+}
+#acc .reg-header-cell {}
+#acc .reg-row {
+  display: grid;
+  grid-template-columns: 1fr 1.5fr 1.5fr 1.5fr 1fr 0.8fr 0.8fr 2fr;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--border);
+  font-size: 12px;
+  align-items: center;
+  transition: background 0.15s;
+}
+#acc .reg-row:hover { background: var(--bg-tertiary); }
+#acc .reg-row.stale { background: rgba(239,68,68,0.06); }
+#acc .reg-row.stale:hover { background: rgba(239,68,68,0.1); }
+#acc .reg-cell { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--text-primary); }
+#acc .reg-cell.muted { color: var(--text-secondary); }
+#acc .reg-badge {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-size: 11px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+#acc .reg-badge-PENDING  { background: rgba(245,158,11,0.15); color: var(--yellow); border: 1px solid rgba(245,158,11,0.3); }
+#acc .reg-badge-RUNNING  { background: rgba(16,185,129,0.15); color: var(--green); border: 1px solid rgba(16,185,129,0.3); }
+#acc .reg-badge-COMPLETED{ background: rgba(16,185,129,0.1);  color: var(--green); border: 1px solid rgba(16,185,129,0.2); }
+#acc .reg-badge-STALE    { background: rgba(239,68,68,0.15); color: var(--red); border: 1px solid rgba(239,68,68,0.3); }
+#acc .reg-badge-FAILED   { background: rgba(239,68,68,0.1);  color: var(--red); border: 1px solid rgba(239,68,68,0.2); }
+
 #acc .oc-filter-bar {
   display: flex;
   align-items: center;
@@ -3880,12 +3954,20 @@ body {
       <span class="acc-stat">🟢 <span class="val" id="tree-stat-active">0</span> active</span>
       <span class="acc-stat">💰 <span class="val" id="tree-stat-cost">$0.00</span> total cost</span>
     </div>
+    <div id="acc-stats-register" style="display:none;gap:24px;align-items:center;flex-wrap:wrap;">
+      <span class="acc-stat">📋 <span class="val" id="reg-stat-total">0</span> total</span>
+      <span class="acc-stat">⏳ <span class="val" id="reg-stat-pending">0</span> pending</span>
+      <span class="acc-stat">🟢 <span class="val" id="reg-stat-running">0</span> running</span>
+      <span class="acc-stat">💀 <span class="val" id="reg-stat-stale">0</span> stale</span>
+      <span class="acc-stat">✅ <span class="val" id="reg-stat-completed">0</span> completed</span>
+    </div>
   </div>
 
   <div class="acc-tabs">
     <div class="acc-tab active" data-tab="acc" onclick="accSwitchTab('acc')">🎯 ACC Sessions</div>
     <div class="acc-tab" data-tab="openclaw" onclick="accSwitchTab('openclaw')">⚡ OpenClaw Sessions</div>
     <div class="acc-tab" data-tab="tree" onclick="accSwitchTab('tree')">🌳 Agent Tree</div>
+    <div class="acc-tab" data-tab="register" onclick="accSwitchTab('register')">📋 Register</div>
   </div>
 
   <div id="acc-tab-acc" class="acc-tab-content">
@@ -3925,6 +4007,40 @@ body {
     </div>
     <div id="tree-container">
       <div class="acc-empty">Loading...</div>
+    </div>
+  </div>
+
+  <div id="acc-tab-register" class="acc-tab-content" style="display:none;">
+    <div class="reg-filter-bar">
+      <span class="reg-chip active" data-filter="all" onclick="regToggleChip(this)">All</span>
+      <span class="reg-chip" data-filter="PENDING" onclick="regToggleChip(this)">Pending</span>
+      <span class="reg-chip" data-filter="RUNNING" onclick="regToggleChip(this)">Running</span>
+      <span class="reg-chip" data-filter="STALE" onclick="regToggleChip(this)">Stale</span>
+      <span class="reg-chip" data-filter="COMPLETED" onclick="regToggleChip(this)">Completed</span>
+      <span class="reg-chip" data-filter="FAILED" onclick="regToggleChip(this)">Failed</span>
+      <input type="text" id="reg-search" placeholder="🔍 search label, spawner..." oninput="regApplyFilter()">
+      <button class="btn" style="background:var(--bg-secondary);color:var(--text-primary);border:1px solid var(--border);padding:7px 14px;border-radius:6px;cursor:pointer;font-size:13px;" onclick="regFetchEntries()">🔄 Refresh</button>
+    </div>
+    <div class="card" style="padding:0;overflow:hidden;">
+      <div class="reg-header">
+        <div class="reg-header-cell">Spawned</div>
+        <div class="reg-header-cell">Spawner</div>
+        <div class="reg-header-cell">Label</div>
+        <div class="reg-header-cell">Session</div>
+        <div class="reg-header-cell">Status</div>
+        <div class="reg-header-cell">Age</div>
+        <div class="reg-header-cell">Timeout</div>
+        <div class="reg-header-cell" style="flex:2">Description</div>
+      </div>
+      <div id="reg-entries-list">
+        <div class="acc-empty">Loading...</div>
+      </div>
+    </div>
+    <div id="reg-daemon-warning" style="display:none;margin-top:16px;">
+      <div class="card" style="border:1px solid var(--red);background:rgba(239,68,68,0.06);padding:16px;">
+        <span style="color:var(--red);font-weight:600;">⚠ acc-daemon not running</span>
+        <span style="color:var(--text-secondary);font-size:13px;margin-left:12px;">Start acc-daemon to see sub-agent register data.</span>
+      </div>
     </div>
   </div>
 
@@ -4127,6 +4243,7 @@ body {
       const activeTab = page.querySelector('.acc-tab.active')?.dataset?.tab;
       if (activeTab === 'openclaw') ocFetchSessions();
       if (activeTab === 'tree') treeFetchSessions();
+      if (activeTab === 'register') regFetchEntries();
     }, 30000);
   };
 
@@ -4143,10 +4260,14 @@ body {
     document.getElementById('acc-tab-acc').style.display = tab === 'acc' ? '' : 'none';
     document.getElementById('acc-tab-openclaw').style.display = tab === 'openclaw' ? '' : 'none';
     document.getElementById('acc-tab-tree').style.display = tab === 'tree' ? '' : 'none';
+    document.getElementById('acc-tab-register').style.display = tab === 'register' ? '' : 'none';
     document.getElementById('acc-stats-acc').style.display = tab === 'acc' ? 'flex' : 'none';
     document.getElementById('acc-stats-oc').style.display = tab === 'openclaw' ? 'flex' : 'none';
     document.getElementById('acc-stats-tree').style.display = tab === 'tree' ? 'flex' : 'none';
-    if (tab === 'openclaw') {
+    document.getElementById('acc-stats-register').style.display = tab === 'register' ? 'flex' : 'none';
+    if (tab === 'register') {
+      regFetchEntries();
+    } else if (tab === 'openclaw') {
       ocFetchSessions();
     } else if (tab === 'tree') {
       treeFetchSessions();
@@ -4322,6 +4443,99 @@ body {
     if (!ts) return '-';
     const secs = Math.floor((Date.now() - ts) / 1000);
     if (secs < 5) return 'just now';
+    if (secs < 60) return secs + 's ago';
+    if (secs < 3600) return Math.floor(secs / 60) + 'm ago';
+    if (secs < 86400) return Math.floor(secs / 3600) + 'h ago';
+    return Math.floor(secs / 86400) + 'd ago';
+  }
+
+  // ── Register tab ─────────────────────────────────────────────────────────────
+  let regEntriesAll = [];
+  let regFilter = 'all';
+  let regSearch = '';
+
+  window.regFetchEntries = async function() {
+    try {
+      const r = await authFetch(API_BASE + '/api/acc/register');
+      if (!r.ok) throw new Error('http ' + r.status);
+      const data = await r.json();
+      regEntriesAll = data.entries || [];
+      const stats = data.stats || {};
+      document.getElementById('reg-stat-total').textContent = stats.total || 0;
+      document.getElementById('reg-stat-pending').textContent = stats.pending || 0;
+      document.getElementById('reg-stat-running').textContent = stats.running || 0;
+      document.getElementById('reg-stat-stale').textContent = stats.stale || 0;
+      document.getElementById('reg-stat-completed').textContent = stats.completed || 0;
+      const warning = document.getElementById('reg-daemon-warning');
+      if (data.error) {
+        warning.style.display = '';
+      } else {
+        warning.style.display = 'none';
+      }
+      regRender();
+    } catch (e) {
+      document.getElementById('reg-entries-list').innerHTML = '<div class="acc-empty">Failed to load register data</div>';
+    }
+  };
+
+  window.regToggleChip = function(el) {
+    document.querySelectorAll('#acc-tab-register .reg-chip').forEach(c => c.classList.remove('active'));
+    el.classList.add('active');
+    regFilter = el.dataset.filter;
+    regRender();
+  };
+
+  window.regApplyFilter = function() {
+    regSearch = document.getElementById('reg-search').value.toLowerCase();
+    regRender();
+  };
+
+  function regRender() {
+    const entries = regEntriesAll.filter(e => {
+      if (regFilter !== 'all' && e.status !== regFilter) return false;
+      if (regSearch) {
+        const hay = [e.label, e.spawner, e.session_id, e.description].join(' ').toLowerCase();
+        if (!hay.includes(regSearch)) return false;
+      }
+      return true;
+    });
+
+    const list = document.getElementById('reg-entries-list');
+    if (!entries.length) {
+      list.innerHTML = '<div class="acc-empty">No entries' + (regFilter !== 'all' ? ' for filter: ' + regFilter : '') + '</div>';
+      return;
+    }
+
+    list.innerHTML = entries.map(e => {
+      const isStale = e.status === 'STALE';
+      const spawnedAgo = regRelTime(e.spawned_at);
+      const spawnerShort = (e.spawner || '').split(':').slice(-2).join(':') || e.spawner || '-';
+      const sessionShort = e.session_id ? e.session_id.substring(0, 16) : '-';
+      const desc = e.description ? e.description.substring(0, 80) : '-';
+      const badgeLabel = {
+        PENDING: '⏳ pending',
+        RUNNING: '▶ running',
+        COMPLETED: '✅ done',
+        STALE: '💀 stale',
+        FAILED: '❌ failed',
+      }[e.status] || e.status;
+
+      return `<div class="reg-row${isStale ? ' stale' : ''}">
+        <div class="reg-cell muted" title="${new Date(e.spawned_at).toISOString()}">${spawnedAgo}</div>
+        <div class="reg-cell muted" title="${e.spawner}">${spawnerShort}</div>
+        <div class="reg-cell" style="font-weight:500;">${e.label || '-'}</div>
+        <div class="reg-cell muted" title="${e.session_id || ''}" style="font-family:'JetBrains Mono',monospace;font-size:11px;">${sessionShort}</div>
+        <div class="reg-cell"><span class="reg-badge reg-badge-${e.status}">${badgeLabel}</span></div>
+        <div class="reg-cell muted">${regRelTime(e.spawned_at)}</div>
+        <div class="reg-cell muted">${e.timeout_mins}m</div>
+        <div class="reg-cell muted" title="${e.description || ''}" style="flex:2;">${desc}</div>
+      </div>`;
+    }).join('');
+  }
+
+  function regRelTime(ms) {
+    if (!ms) return '-';
+    const secs = Math.floor((Date.now() - ms) / 1000);
     if (secs < 60) return secs + 's ago';
     if (secs < 3600) return Math.floor(secs / 60) + 'm ago';
     if (secs < 86400) return Math.floor(secs / 3600) + 'h ago';
